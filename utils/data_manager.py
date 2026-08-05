@@ -74,15 +74,13 @@ def load_raw_data(filepath: Optional[str] = None) -> pd.DataFrame:
     Membaca data mentah dari file Excel tanpa caching menggunakan smart Excel reader.
     """
     path = filepath or DEFAULT_FILE
-    if not os.path.exists(path):
-        # Buat file kosong jika belum ada
-        df = pd.DataFrame(columns=[
-            "tahun", "nama_opd", "penanggungjawab", "kode_rekening",
-            "jenis_belanja", "bulan", "pagu_anggaran", "realisasi"
-        ])
+    if not os.path.exists(path) or os.path.getsize(path) == 0:
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        df.to_excel(path, index=False, sheet_name="Realisasi Anggaran")
-        return df
+        # Buat dummy data awal jika belum ada
+        try:
+            import generate_dummy
+        except Exception:
+            pass
 
     try:
         df = read_smart_excel(path)
@@ -90,6 +88,15 @@ def load_raw_data(filepath: Optional[str] = None) -> pd.DataFrame:
         df = pd.read_excel(path)
 
     df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+
+    if df.empty:
+        try:
+            import generate_dummy
+            df = read_smart_excel(path)
+            df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+        except Exception:
+            pass
+
     return df
 
 
