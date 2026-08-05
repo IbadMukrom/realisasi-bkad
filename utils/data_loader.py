@@ -53,9 +53,20 @@ def _process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     df["nama_bulan"] = df["bulan"].map(NAMA_BULAN)
     df["triwulan"] = ((df["bulan"] - 1) // 3 + 1)
     df["nama_triwulan"] = df["triwulan"].map(NAMA_TRIWULAN)
-    df["sisa_anggaran"] = df["pagu_anggaran"] - df["realisasi"]
+
+    # Urutkan berdasarkan urutan bulan untuk akumulasi
+    sort_cols = [c for c in ["tahun", "penanggungjawab", "kode_rekening", "jenis_belanja", "bulan"] if c in df.columns]
+    df = df.sort_values(sort_cols)
+
+    group_cols = [c for c in ["tahun", "penanggungjawab", "kode_rekening", "jenis_belanja"] if c in df.columns]
+    if not group_cols:
+        group_cols = ["tahun"]
+
+    # Hitung Realisasi Kumulatif (terakumulasi dari bulan ke bulan)
+    df["realisasi_kumulatif"] = df.groupby(group_cols)["realisasi"].cumsum()
+    df["sisa_anggaran"] = df["pagu_anggaran"] - df["realisasi_kumulatif"]
     df["persentase_realisasi"] = (
-        (df["realisasi"] / df["pagu_anggaran"] * 100)
+        (df["realisasi_kumulatif"] / df["pagu_anggaran"] * 100)
         .round(2)
         .fillna(0)
     )
@@ -141,22 +152,27 @@ def filter_data(
 
 def get_summary(df: pd.DataFrame) -> dict:
     """
-    Menghitung ringkasan data: total pagu, realisasi, sisa, persentase.
-    Mengambil data bulan terakhir per item kegiatan/jenis belanja.
+    Menghitung ringkasan data: total pagu, realisasi kumulatif terakumulasi, sisa, persentase.
     """
-    group_cols = ["jenis_belanja"]
-    if "penanggungjawab" in df.columns:
-        group_cols.insert(0, "penanggungjawab")
-    if "kode_rekening" in df.columns:
-        group_cols.insert(0, "kode_rekening")
+    if df.empty:
+        return {
+            "total_pagu": 0.0,
+            "total_realisasi": 0.0,
+            "total_sisa": 0.0,
+            "persentase": 0.0,
+        }
+
+    group_cols = [c for c in ["penanggungjawab", "kode_rekening", "jenis_belanja"] if c in df.columns]
+    if not group_cols:
+        group_cols = ["jenis_belanja"]
 
     idx = df.groupby(group_cols)["bulan"].idxmax()
     latest = df.loc[idx]
 
     total_pagu = latest["pagu_anggaran"].sum()
-    total_realisasi = latest["realisasi"].sum()
-    total_sisa = total_pagu - total_realisasi
-    persentase = (total_realisasi / total_pagu * 100) if total_pagu > 0 else 0
+    total_realisasi = latest["realisasi_kumulatif"].sum() if "realisasi_kumulatif" in latest.columns else latest["realisasi"].sum()
+    total_sisa = max(0.0, total_pagu - total_realisasi)
+    persentase = (total_realisasi / total_pagu * 100) if total_pagu > 0 else 0.0
 
     return {
         "total_pagu": total_pagu,
@@ -168,9 +184,9 @@ def get_summary(df: pd.DataFrame) -> dict:
 
 def get_pj_comparison(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Perbandingan pagu vs realisasi per Bidang Penanggung Jawab.
+    Perbandingan pagu vs realisasi kumulatif per Bidang Penanggung Jawab.
     """
-    if "penanggungjawab" not in df.columns:
+    if "penanggungjawab" not in df.columns or df.empty:
         return pd.DataFrame()
 
     group_cols = ["penanggungjawab", "jenis_belanja"]
@@ -180,12 +196,14 @@ def get_pj_comparison(df: pd.DataFrame) -> pd.DataFrame:
     idx = df.groupby(group_cols)["bulan"].idxmax()
     latest = df.loc[idx]
 
+    real_col = "realisasi_kumulatif" if "realisasi_kumulatif" in latest.columns else "realisasi"
+
     pj_df = (
         latest
         .groupby("penanggungjawab")
         .agg(
             pagu_anggaran=("pagu_anggaran", "sum"),
-            realisasi=("realisasi", "sum"),
+            realisasi=(real_col, "sum"),
         )
         .reset_index()
     )
@@ -201,13 +219,22 @@ def get_pj_comparison(df: pd.DataFrame) -> pd.DataFrame:
 
 def get_monthly_trend(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Agregasi realisasi kumulatif per bulan.
+    Agregasi realisasi kumulatif terakumulasi per bulan.
     """
+    if df.empty:
+        return pd.DataFrame()
+
+    group_cols = [c for c in ["penanggungjawab", "kode_rekening", "jenis_belanja"] if c in df.columns]
+    if not group_cols:
+        group_cols = ["jenis_belanja"]
+
+    real_col = "realisasi_kumulatif" if "realisasi_kumulatif" in df.columns else "realisasi"
+
     monthly = (
         df
         .groupby("bulan")
         .agg(
-            realisasi_kumulatif=("realisasi", "sum"),
+            realisasi_kumulatif=(real_col, "sum"),
             pagu_anggaran=("pagu_anggaran", "sum"),
         )
         .reset_index()
