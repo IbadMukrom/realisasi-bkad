@@ -38,6 +38,32 @@ def is_gsheets_configured() -> bool:
         return False
 
 
+def fix_private_key(pk: str) -> str:
+    """
+    Membersihkan dan memformat private_key Google Service Account agar kompatibel
+    dengan library cryptography dan gspread.
+    """
+    if not isinstance(pk, str):
+        return pk
+
+    pk = pk.strip().strip('"').strip("'")
+    pk = pk.replace("\\\\n", "\n").replace("\\n", "\n")
+
+    lines = pk.strip().splitlines()
+    cleaned_lines = []
+    for line in lines:
+        l = line.strip()
+        if not l:
+            continue
+        if l.startswith("-----BEGIN") or l.startswith("-----END"):
+            cleaned_lines.append(l)
+        else:
+            fixed_body = l.replace("_", "/").replace("-", "+")
+            cleaned_lines.append(fixed_body)
+
+    return "\n".join(cleaned_lines)
+
+
 def get_gsheets_client_and_sheet():
     """
     Mendapatkan objek gspread worksheet dari Google Sheets dengan sanitasi private_key otomatis.
@@ -45,7 +71,7 @@ def get_gsheets_client_and_sheet():
     import gspread
     sec = dict(st.secrets["connections"]["gsheets"])
     if "private_key" in sec and isinstance(sec["private_key"], str):
-        sec["private_key"] = sec["private_key"].replace("\\\\n", "\n").replace("\\n", "\n")
+        sec["private_key"] = fix_private_key(sec["private_key"])
 
     spreadsheet_url = sec.get("spreadsheet", "")
     gc = gspread.service_account_from_dict(sec)
