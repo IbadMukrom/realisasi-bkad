@@ -40,6 +40,7 @@ from utils.data_manager import (
     get_data_path,
     get_all_jenis_belanja,
     get_all_penanggungjawab,
+    is_gsheets_configured,
     JENIS_BELANJA_OPTIONS,
 )
 from utils.auth import (
