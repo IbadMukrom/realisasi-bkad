@@ -46,16 +46,19 @@ def get_all_penanggungjawab(filepath: Optional[str] = None) -> List[str]:
     """
     Mendapatkan daftar Bidang Penanggung Jawab dari file Excel.
     """
-    df = load_raw_data(filepath)
-    if not df.empty and "penanggungjawab" in df.columns:
-        return sorted([str(x).strip() for x in df["penanggungjawab"].dropna().unique() if str(x).strip()])
-    return [
+    defaults = [
         "Sekretariat",
         "Bidang Anggaran",
         "Bidang Perbendaharaan",
         "Bidang Akuntansi & Pelaporan",
         "Bidang Pengelolaan BMD",
     ]
+    df = load_raw_data(filepath)
+    if not df.empty and "penanggungjawab" in df.columns:
+        existing = [str(x).strip() for x in df["penanggungjawab"].dropna().unique() if str(x).strip()]
+        combined = list(dict.fromkeys(defaults + existing))
+        return sorted(combined)
+    return defaults
 
 
 def get_data_path() -> str:

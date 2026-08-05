@@ -46,8 +46,8 @@ def _process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     # Pastikan tipe data numerik
     df["pagu_anggaran"] = pd.to_numeric(df["pagu_anggaran"], errors="coerce").fillna(0)
     df["realisasi"] = pd.to_numeric(df["realisasi"], errors="coerce").fillna(0)
-    df["bulan"] = df["bulan"].astype(int)
-    df["tahun"] = df["tahun"].astype(int)
+    df["bulan"] = pd.to_numeric(df["bulan"], errors="coerce").fillna(1).astype(int)
+    df["tahun"] = pd.to_numeric(df["tahun"], errors="coerce").fillna(2024).astype(int)
 
     # Tambah kolom turunan
     df["nama_bulan"] = df["bulan"].map(NAMA_BULAN)

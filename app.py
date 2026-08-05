@@ -410,10 +410,22 @@ if page == "📝 Kelola Data":
             else:
                 st.caption(f"Menampilkan **{len(filtered_edit)}** baris data")
 
-                # Format angka ke string berpemisah titik untuk tabel editor
+                # Format angka ke string berpemisah titik dan bersihkan tipe data untuk tabel editor
                 display_edit = filtered_edit.copy()
+                display_edit["tahun"] = pd.to_numeric(display_edit["tahun"], errors="coerce").fillna(2024).astype(int)
+                display_edit["bulan"] = pd.to_numeric(display_edit["bulan"], errors="coerce").fillna(1).astype(int)
+                display_edit["nama_opd"] = display_edit["nama_opd"].fillna("").astype(str)
+                display_edit["penanggungjawab"] = display_edit["penanggungjawab"].fillna("Sekretariat").astype(str)
+                display_edit["kode_rekening"] = display_edit["kode_rekening"].fillna("").astype(str).str.replace(r'\.0$', '', regex=True)
+                display_edit["jenis_belanja"] = display_edit["jenis_belanja"].fillna("").astype(str)
                 display_edit["pagu_anggaran"] = display_edit["pagu_anggaran"].apply(format_rupiah_titik)
                 display_edit["realisasi"] = display_edit["realisasi"].apply(format_rupiah_titik)
+
+                pj_options = get_all_penanggungjawab(data_path)
+                current_pjs = [str(x) for x in display_edit["penanggungjawab"].unique() if str(x).strip()]
+                for pj in current_pjs:
+                    if pj not in pj_options:
+                        pj_options.append(pj)
 
                 edit_cols = [c for c in ["tahun", "nama_opd", "penanggungjawab", "kode_rekening", "jenis_belanja", "bulan", "pagu_anggaran", "realisasi"] if c in display_edit.columns]
                 edited_df = st.data_editor(
@@ -421,7 +433,7 @@ if page == "📝 Kelola Data":
                     column_config={
                         "tahun": st.column_config.NumberColumn("Tahun", min_value=2020, max_value=2030, format="%d"),
                         "nama_opd": st.column_config.TextColumn("Nama OPD", disabled=True),
-                        "penanggungjawab": st.column_config.SelectboxColumn("Penanggung Jawab", options=get_all_penanggungjawab(data_path)),
+                        "penanggungjawab": st.column_config.SelectboxColumn("Penanggung Jawab", options=pj_options),
                         "kode_rekening": st.column_config.TextColumn("Kode Rekening"),
                         "jenis_belanja": st.column_config.TextColumn("Sub-Kegiatan / Uraian"),
                         "bulan": st.column_config.NumberColumn("Bulan", min_value=1, max_value=12, format="%d"),
@@ -494,6 +506,8 @@ if page == "📝 Kelola Data":
             else:
                 # Tampilkan data dengan checkbox
                 display_del = filtered_del.copy()
+                display_del["tahun"] = pd.to_numeric(display_del["tahun"], errors="coerce").fillna(2024).astype(int)
+                display_del["bulan"] = pd.to_numeric(display_del["bulan"], errors="coerce").fillna(1).astype(int)
                 display_del["nama_bulan"] = display_del["bulan"].map(NAMA_BULAN)
                 display_del["pagu_fmt"] = display_del["pagu_anggaran"].apply(lambda v: f"Rp {format_rupiah_titik(v)}")
                 display_del["realisasi_fmt"] = display_del["realisasi"].apply(lambda v: f"Rp {format_rupiah_titik(v)}")
@@ -506,9 +520,6 @@ if page == "📝 Kelola Data":
                         "pagu_fmt": "Pagu Anggaran",
                         "realisasi_fmt": "Realisasi",
                     }),
-                    column_config={
-                        "_select": st.column_config.CheckboxColumn("Pilih", default=False),
-                    },
                     use_container_width=True,
                     hide_index=False,
                     num_rows="fixed",
