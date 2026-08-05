@@ -132,13 +132,33 @@ def load_raw_data(filepath: Optional[str] = None) -> pd.DataFrame:
     if is_gsheets_configured():
         try:
             ws = get_gsheets_client_and_sheet()
-            records = ws.get_all_records()
-            df = pd.DataFrame(records)
-            if not df.empty:
+            try:
+                records = ws.get_all_records()
+                df = pd.DataFrame(records)
+            except Exception:
+                df = pd.DataFrame()
+
+            if not df.empty and all(c in df.columns for c in ["tahun", "jenis_belanja"]):
                 df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
                 return df
+
+            # Jika Google Sheet baru/kosong, auto-initialize dengan data default dari lokal
+            path_fallback = filepath or DEFAULT_FILE
+            if os.path.exists(path_fallback):
+                from utils.data_loader import read_smart_excel
+                local_df = read_smart_excel(path_fallback)
+                local_df.columns = local_df.columns.str.strip().str.lower().str.replace(" ", "_")
+                if not local_df.empty:
+                    save_data(local_df)
+                    return local_df
         except Exception as e:
-            st.warning(f"⚠️ Gagal membaca Google Sheets, beralih ke data lokal: {e}")
+            err_msg = str(e)
+            if "403" in err_msg or "PERMISSION_DENIED" in err_msg:
+                st.warning("⚠️ **Akses Google Sheet Ditolak (403)**: Pastikan Anda telah Share (bagikan) Google Sheet ke email `streamlit-gsheets@realisasi-bkad.iam.gserviceaccount.com` dengan akses **Editor**.")
+            elif "API has not been used" in err_msg or "disabled" in err_msg:
+                st.warning("⚠️ **Google Sheets API Belum Aktif**: Buka Google Cloud Console dan aktifkan (Enable) **Google Sheets API** & **Google Drive API**.")
+            else:
+                st.warning(f"⚠️ Gagal membaca Google Sheets, beralih ke data lokal: {e}")
 
     path = filepath or DEFAULT_FILE
     if not os.path.exists(path) or os.path.getsize(path) == 0:
