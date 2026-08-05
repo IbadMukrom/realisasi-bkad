@@ -220,11 +220,12 @@ def get_pj_comparison(df: pd.DataFrame) -> pd.DataFrame:
 def get_monthly_trend(df: pd.DataFrame) -> pd.DataFrame:
     """
     Agregasi realisasi kumulatif terakumulasi per bulan.
+    Pagu Anggaran Tahunan nilainya TETAP (tidak dijumlahkan per bulan).
     """
     if df.empty:
         return pd.DataFrame()
 
-    group_cols = [c for c in ["penanggungjawab", "kode_rekening", "jenis_belanja"] if c in df.columns]
+    group_cols = [c for c in ["tahun", "penanggungjawab", "kode_rekening", "jenis_belanja"] if c in df.columns]
     if not group_cols:
         group_cols = ["jenis_belanja"]
 
@@ -235,38 +236,54 @@ def get_monthly_trend(df: pd.DataFrame) -> pd.DataFrame:
         .groupby("bulan")
         .agg(
             realisasi_kumulatif=(real_col, "sum"),
-            pagu_anggaran=("pagu_anggaran", "sum"),
         )
         .reset_index()
     )
     monthly["nama_bulan"] = monthly["bulan"].map(NAMA_BULAN)
+
+    idx = df.groupby(group_cols)["bulan"].idxmax()
+    latest = df.loc[idx]
+    monthly["pagu_anggaran"] = latest["pagu_anggaran"].sum()
 
     return monthly
 
 
 def get_quarterly_trend(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Agregasi realisasi per triwulan.
+    Agregasi realisasi per triwulan dengan Pagu Anggaran Tahunan yang TETAP.
     """
+    if df.empty:
+        return pd.DataFrame()
+
     df_copy = df.copy()
     df_copy["triwulan"] = ((df_copy["bulan"] - 1) // 3 + 1)
 
-    idx = df_copy.groupby(["jenis_belanja", "triwulan"])["bulan"].idxmax()
+    group_cols = [c for c in ["tahun", "penanggungjawab", "kode_rekening", "jenis_belanja"] if c in df.columns]
+    if not group_cols:
+        group_cols = ["jenis_belanja"]
+
+    real_col = "realisasi_kumulatif" if "realisasi_kumulatif" in df_copy.columns else "realisasi"
+
+    idx = df_copy.groupby(group_cols + ["triwulan"])["bulan"].idxmax()
     latest_per_q = df_copy.loc[idx]
 
     quarterly = (
         latest_per_q
         .groupby("triwulan")
         .agg(
-            realisasi_kumulatif=("realisasi", "sum"),
-            pagu_anggaran=("pagu_anggaran", "sum"),
+            realisasi_kumulatif=(real_col, "sum"),
         )
         .reset_index()
     )
+
+    idx_annual = df.groupby(group_cols)["bulan"].idxmax()
+    total_pagu = df.loc[idx_annual]["pagu_anggaran"].sum()
+
+    quarterly["pagu_anggaran"] = total_pagu
     quarterly["nama_triwulan"] = quarterly["triwulan"].map(NAMA_TRIWULAN)
     quarterly["persentase"] = (
-        quarterly["realisasi_kumulatif"] / quarterly["pagu_anggaran"] * 100
-    ).round(2)
+        (quarterly["realisasi_kumulatif"] / total_pagu * 100).round(2) if total_pagu > 0 else 0
+    )
 
     return quarterly
 
@@ -274,22 +291,26 @@ def get_quarterly_trend(df: pd.DataFrame) -> pd.DataFrame:
 def get_belanja_comparison(df: pd.DataFrame) -> pd.DataFrame:
     """
     Perbandingan pagu vs realisasi per jenis belanja / sub-kegiatan.
+    Pagu Anggaran dengan nama jenis belanja yang sama nilainya TETAP (tidak terakumulasi per bulan).
     """
-    group_cols = ["jenis_belanja"]
-    if "penanggungjawab" in df.columns:
-        group_cols.insert(0, "penanggungjawab")
-    if "kode_rekening" in df.columns:
-        group_cols.insert(0, "kode_rekening")
+    if df.empty:
+        return pd.DataFrame()
+
+    group_cols = [c for c in ["tahun", "penanggungjawab", "kode_rekening", "jenis_belanja"] if c in df.columns]
+    if not group_cols:
+        group_cols = ["jenis_belanja"]
 
     idx = df.groupby(group_cols)["bulan"].idxmax()
     latest = df.loc[idx]
+
+    real_col = "realisasi_kumulatif" if "realisasi_kumulatif" in latest.columns else "realisasi"
 
     comparison = (
         latest
         .groupby("jenis_belanja")
         .agg(
-            pagu_anggaran=("pagu_anggaran", "sum"),
-            realisasi=("realisasi", "sum"),
+            pagu_anggaran=("pagu_anggaran", "first"),  # Pagu tetap per jenis belanja
+            realisasi=(real_col, "sum"),
         )
         .reset_index()
     )
@@ -308,21 +329,24 @@ def get_belanja_composition(df: pd.DataFrame) -> pd.DataFrame:
     """
     Komposisi realisasi per jenis belanja / sub-kegiatan.
     """
-    group_cols = ["jenis_belanja"]
-    if "penanggungjawab" in df.columns:
-        group_cols.insert(0, "penanggungjawab")
-    if "kode_rekening" in df.columns:
-        group_cols.insert(0, "kode_rekening")
+    if df.empty:
+        return pd.DataFrame()
+
+    group_cols = [c for c in ["tahun", "penanggungjawab", "kode_rekening", "jenis_belanja"] if c in df.columns]
+    if not group_cols:
+        group_cols = ["jenis_belanja"]
 
     idx = df.groupby(group_cols)["bulan"].idxmax()
     latest = df.loc[idx]
+
+    real_col = "realisasi_kumulatif" if "realisasi_kumulatif" in latest.columns else "realisasi"
 
     composition = (
         latest
         .groupby("jenis_belanja")
         .agg(
-            pagu_anggaran=("pagu_anggaran", "sum"),
-            realisasi=("realisasi", "sum"),
+            pagu_anggaran=("pagu_anggaran", "first"),  # Pagu tetap per jenis belanja
+            realisasi=(real_col, "sum"),
         )
         .reset_index()
     )
