@@ -38,10 +38,28 @@ def is_gsheets_configured() -> bool:
         return False
 
 
-def get_gsheets_connection():
-    """Mendapatkan objek koneksi Google Sheets."""
-    from streamlit_gsheets import GSheetsConnection
-    return st.connection("gsheets", type=GSheetsConnection)
+def get_gsheets_client_and_sheet():
+    """
+    Mendapatkan objek gspread worksheet dari Google Sheets dengan sanitasi private_key otomatis.
+    """
+    import gspread
+    sec = dict(st.secrets["connections"]["gsheets"])
+    if "private_key" in sec and isinstance(sec["private_key"], str):
+        sec["private_key"] = sec["private_key"].replace("\\\\n", "\n").replace("\\n", "\n")
+
+    spreadsheet_url = sec.get("spreadsheet", "")
+    gc = gspread.service_account_from_dict(sec)
+    
+    if spreadsheet_url.startswith("http"):
+        sh = gc.open_by_url(spreadsheet_url)
+    else:
+        sh = gc.open(spreadsheet_url)
+        
+    try:
+        ws = sh.worksheet("Realisasi Anggaran")
+    except Exception:
+        ws = sh.sheet1
+    return ws
 
 
 def get_all_jenis_belanja(filepath: Optional[str] = None) -> List[str]:
@@ -87,10 +105,11 @@ def load_raw_data(filepath: Optional[str] = None) -> pd.DataFrame:
     """
     if is_gsheets_configured():
         try:
-            conn = get_gsheets_connection()
-            df = conn.read(worksheet="Realisasi Anggaran", ttl="0s")
-            df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+            ws = get_gsheets_client_and_sheet()
+            records = ws.get_all_records()
+            df = pd.DataFrame(records)
             if not df.empty:
+                df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
                 return df
         except Exception as e:
             st.warning(f"⚠️ Gagal membaca Google Sheets, beralih ke data lokal: {e}")
@@ -129,12 +148,15 @@ def save_data(df: pd.DataFrame, filepath: Optional[str] = None) -> None:
     """
     save_cols = ["tahun", "nama_opd", "penanggungjawab", "kode_rekening", "jenis_belanja", "bulan", "pagu_anggaran", "realisasi"]
     existing_cols = [c for c in save_cols if c in df.columns]
-    clean_df = df[existing_cols]
+    clean_df = df[existing_cols].copy()
 
     if is_gsheets_configured():
         try:
-            conn = get_gsheets_connection()
-            conn.update(worksheet="Realisasi Anggaran", data=clean_df)
+            ws = get_gsheets_client_and_sheet()
+            ws.clear()
+            header = existing_cols
+            values = [header] + clean_df.astype(str).values.tolist()
+            ws.update("A1", values)
             st.cache_data.clear()
         except Exception as e:
             st.error(f"❌ Gagal menyimpan ke Google Sheets: {e}")
