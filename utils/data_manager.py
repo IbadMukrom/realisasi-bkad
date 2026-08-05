@@ -135,9 +135,11 @@ def get_data_path() -> str:
     return DEFAULT_FILE
 
 
+@st.cache_data(ttl="10s", show_spinner=False)
 def load_raw_data(filepath: Optional[str] = None) -> pd.DataFrame:
     """
     Membaca data mentah dari Google Sheets (jika dikonfigurasi) atau dari file Excel.
+    Menggunakan cache 10 detik untuk mencegah error 429 (Quota Exceeded).
     """
     default_cols = ["tahun", "nama_opd", "penanggungjawab", "kode_rekening", "jenis_belanja", "bulan", "pagu_anggaran", "realisasi"]
 
