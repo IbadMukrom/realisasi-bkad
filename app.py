@@ -412,20 +412,29 @@ if page == "📝 Kelola Data":
 
                 # Format angka ke string berpemisah titik dan bersihkan tipe data untuk tabel editor
                 display_edit = filtered_edit.copy()
-                display_edit["tahun"] = pd.to_numeric(display_edit["tahun"], errors="coerce").fillna(2024).astype(int)
-                display_edit["bulan"] = pd.to_numeric(display_edit["bulan"], errors="coerce").fillna(1).astype(int)
-                display_edit["nama_opd"] = display_edit["nama_opd"].fillna("").astype(str)
-                display_edit["penanggungjawab"] = display_edit["penanggungjawab"].fillna("Sekretariat").astype(str)
-                display_edit["kode_rekening"] = display_edit["kode_rekening"].fillna("").astype(str).str.replace(r'\.0$', '', regex=True)
-                display_edit["jenis_belanja"] = display_edit["jenis_belanja"].fillna("").astype(str)
-                display_edit["pagu_anggaran"] = display_edit["pagu_anggaran"].apply(format_rupiah_titik)
-                display_edit["realisasi"] = display_edit["realisasi"].apply(format_rupiah_titik)
+                if "tahun" in display_edit.columns:
+                    display_edit["tahun"] = pd.to_numeric(display_edit["tahun"], errors="coerce").fillna(2024).astype(int)
+                if "bulan" in display_edit.columns:
+                    display_edit["bulan"] = pd.to_numeric(display_edit["bulan"], errors="coerce").fillna(1).astype(int)
+                if "nama_opd" in display_edit.columns:
+                    display_edit["nama_opd"] = display_edit["nama_opd"].fillna("").astype(str)
+                if "penanggungjawab" in display_edit.columns:
+                    display_edit["penanggungjawab"] = display_edit["penanggungjawab"].fillna("Sekretariat").astype(str)
+                if "kode_rekening" in display_edit.columns:
+                    display_edit["kode_rekening"] = display_edit["kode_rekening"].fillna("").astype(str).str.replace(r'\.0$', '', regex=True)
+                if "jenis_belanja" in display_edit.columns:
+                    display_edit["jenis_belanja"] = display_edit["jenis_belanja"].fillna("").astype(str)
+                if "pagu_anggaran" in display_edit.columns:
+                    display_edit["pagu_anggaran"] = display_edit["pagu_anggaran"].apply(format_rupiah_titik)
+                if "realisasi" in display_edit.columns:
+                    display_edit["realisasi"] = display_edit["realisasi"].apply(format_rupiah_titik)
 
                 pj_options = get_all_penanggungjawab(data_path)
-                current_pjs = [str(x) for x in display_edit["penanggungjawab"].unique() if str(x).strip()]
-                for pj in current_pjs:
-                    if pj not in pj_options:
-                        pj_options.append(pj)
+                if "penanggungjawab" in display_edit.columns:
+                    current_pjs = [str(x) for x in display_edit["penanggungjawab"].unique() if str(x).strip()]
+                    for pj in current_pjs:
+                        if pj not in pj_options:
+                            pj_options.append(pj)
 
                 edit_cols = [c for c in ["tahun", "nama_opd", "penanggungjawab", "kode_rekening", "jenis_belanja", "bulan", "pagu_anggaran", "realisasi"] if c in display_edit.columns]
                 edited_df = st.data_editor(
@@ -506,11 +515,21 @@ if page == "📝 Kelola Data":
             else:
                 # Tampilkan data dengan checkbox
                 display_del = filtered_del.copy()
-                display_del["tahun"] = pd.to_numeric(display_del["tahun"], errors="coerce").fillna(2024).astype(int)
-                display_del["bulan"] = pd.to_numeric(display_del["bulan"], errors="coerce").fillna(1).astype(int)
-                display_del["nama_bulan"] = display_del["bulan"].map(NAMA_BULAN)
-                display_del["pagu_fmt"] = display_del["pagu_anggaran"].apply(lambda v: f"Rp {format_rupiah_titik(v)}")
-                display_del["realisasi_fmt"] = display_del["realisasi"].apply(lambda v: f"Rp {format_rupiah_titik(v)}")
+                if "tahun" in display_del.columns:
+                    display_del["tahun"] = pd.to_numeric(display_del["tahun"], errors="coerce").fillna(2024).astype(int)
+                if "bulan" in display_del.columns:
+                    display_del["bulan"] = pd.to_numeric(display_del["bulan"], errors="coerce").fillna(1).astype(int)
+                    display_del["nama_bulan"] = display_del["bulan"].map(NAMA_BULAN)
+                else:
+                    display_del["nama_bulan"] = "-"
+                if "pagu_anggaran" in display_del.columns:
+                    display_del["pagu_fmt"] = display_del["pagu_anggaran"].apply(lambda v: f"Rp {format_rupiah_titik(v)}")
+                else:
+                    display_del["pagu_fmt"] = "-"
+                if "realisasi" in display_del.columns:
+                    display_del["realisasi_fmt"] = display_del["realisasi"].apply(lambda v: f"Rp {format_rupiah_titik(v)}")
+                else:
+                    display_del["realisasi_fmt"] = "-"
 
                 selected_del = st.data_editor(
                     display_del[["tahun", "jenis_belanja", "nama_bulan", "pagu_fmt", "realisasi_fmt"]].rename(columns={
