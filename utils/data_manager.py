@@ -139,28 +139,24 @@ def load_raw_data(filepath: Optional[str] = None) -> pd.DataFrame:
     """
     Membaca data mentah dari Google Sheets (jika dikonfigurasi) atau dari file Excel.
     """
+    default_cols = ["tahun", "nama_opd", "penanggungjawab", "kode_rekening", "jenis_belanja", "bulan", "pagu_anggaran", "realisasi"]
+
     if is_gsheets_configured():
         try:
             ws = get_gsheets_client_and_sheet()
             try:
                 records = ws.get_all_records()
-                df = pd.DataFrame(records)
+                if records:
+                    df = pd.DataFrame(records)
+                else:
+                    headers = ws.row_values(1)
+                    cols = headers if headers else default_cols
+                    df = pd.DataFrame(columns=cols)
             except Exception:
-                df = pd.DataFrame()
+                df = pd.DataFrame(columns=default_cols)
 
-            if not df.empty and any(c in df.columns for c in ["tahun", "jenis_belanja", "Tahun", "Jenis Belanja"]):
-                df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
-                return df
-
-            # Jika Google Sheet baru/kosong, auto-initialize dengan data default dari lokal
-            path_fallback = filepath or DEFAULT_FILE
-            if os.path.exists(path_fallback):
-                from utils.data_loader import read_smart_excel
-                local_df = read_smart_excel(path_fallback)
-                local_df.columns = local_df.columns.str.strip().str.lower().str.replace(" ", "_")
-                if not local_df.empty:
-                    save_data(local_df)
-                    return local_df
+            df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+            return df
         except Exception as e:
             err_name = type(e).__name__
             err_msg = str(e).strip() or repr(e)
@@ -172,30 +168,22 @@ def load_raw_data(filepath: Optional[str] = None) -> pd.DataFrame:
                 st.warning(f"⚠️ **Gagal Koneksi Google Sheets**: {full_err}")
 
     path = filepath or DEFAULT_FILE
-    if not os.path.exists(path) or os.path.getsize(path) == 0:
+    if not os.path.exists(path):
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        try:
-            import generate_dummy
-        except Exception:
-            pass
+        empty_df = pd.DataFrame(columns=default_cols)
+        empty_df.to_excel(path, index=False, sheet_name="Realisasi Anggaran")
+        return empty_df
 
     try:
         from utils.data_loader import read_smart_excel
         df = read_smart_excel(path)
     except Exception:
-        df = pd.read_excel(path)
+        try:
+            df = pd.read_excel(path)
+        except Exception:
+            df = pd.DataFrame(columns=default_cols)
 
     df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
-
-    if df.empty:
-        try:
-            import generate_dummy
-            from utils.data_loader import read_smart_excel
-            df = read_smart_excel(path)
-            df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
-        except Exception:
-            pass
-
     return df
 
 
