@@ -3,4 +3,4 @@ starlette<1.4.0
 pandas>=2.0.0
 plotly>=5.18.0
 openpyxl>=3.1.0
-st-gsheets-connection>=0.1.0
+gspread>=6.0.0
