@@ -152,7 +152,9 @@ def filter_data(
 
 def get_summary(df: pd.DataFrame) -> dict:
     """
-    Menghitung ringkasan data: total pagu, realisasi kumulatif terakumulasi, sisa, persentase.
+    Menghitung ringkasan data:
+    - Total Pagu Tahunan: Pagu tetap (diambil 1x per item unik per tahun, tidak terakumulasi antar bulan).
+    - Total Realisasi: Realisasi kumulatif terakumulasi s.d. bulan terakhir.
     """
     if df.empty:
         return {
@@ -162,15 +164,19 @@ def get_summary(df: pd.DataFrame) -> dict:
             "persentase": 0.0,
         }
 
-    group_cols = [c for c in ["penanggungjawab", "kode_rekening", "jenis_belanja"] if c in df.columns]
-    if not group_cols:
-        group_cols = ["jenis_belanja"]
+    item_cols = [c for c in ["tahun", "penanggungjawab", "kode_rekening", "jenis_belanja"] if c in df.columns]
+    if not item_cols:
+        item_cols = ["jenis_belanja"]
 
-    idx = df.groupby(group_cols)["bulan"].idxmax()
+    # Total Pagu Tahunan (TETAP: 1x per item unik)
+    total_pagu = df.groupby(item_cols)["pagu_anggaran"].first().sum()
+
+    # Total Realisasi (Terakumulasi s.d. bulan terakhir per item)
+    idx = df.groupby(item_cols)["bulan"].idxmax()
     latest = df.loc[idx]
+    real_col = "realisasi_kumulatif" if "realisasi_kumulatif" in latest.columns else "realisasi"
+    total_realisasi = latest[real_col].sum()
 
-    total_pagu = latest["pagu_anggaran"].sum()
-    total_realisasi = latest["realisasi_kumulatif"].sum() if "realisasi_kumulatif" in latest.columns else latest["realisasi"].sum()
     total_sisa = max(0.0, total_pagu - total_realisasi)
     persentase = (total_realisasi / total_pagu * 100) if total_pagu > 0 else 0.0
 
