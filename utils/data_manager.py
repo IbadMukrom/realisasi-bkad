@@ -166,12 +166,10 @@ def load_raw_data(filepath: Optional[str] = None) -> pd.DataFrame:
             err_msg = str(e).strip() or repr(e)
             full_err = f"{err_name}: {err_msg}"
             
-            if "403" in full_err or "PERMISSION_DENIED" in full_err or "permission" in full_err.lower():
-                st.warning("⚠️ **Akses Google Sheet Ditolak (403)**: Pastikan Anda telah membagikan (Share) Google Sheet `1W5jizc3NwmMjbOtMcdh_ZjjhYu24N1EmU5zGWypYxTI` ke email Service Account: `streamlit-gsheets@realisasi-bkad.iam.gserviceaccount.com` dengan hak akses **Editor**.")
-            elif "API has not been used" in full_err or "disabled" in full_err:
-                st.warning("⚠️ **Google Sheets API / Drive API Belum Aktif**: Silakan buka Google Cloud Console dan aktifkan (Enable) **Google Sheets API** & **Google Drive API**.")
+            if "API has not been used" in full_err or "disabled" in full_err.lower():
+                st.warning(f"⚠️ **API Google Belum Aktif di GCP**: Silakan buka Google Cloud Console dan aktifkan (Enable) **Google Sheets API** & **Google Drive API**.\n\nDetail: {full_err}")
             else:
-                st.warning(f"⚠️ Gagal membaca Google Sheets ({full_err}), beralih ke data lokal.")
+                st.warning(f"⚠️ **Gagal Koneksi Google Sheets**: {full_err}")
 
     path = filepath or DEFAULT_FILE
     if not os.path.exists(path) or os.path.getsize(path) == 0:
