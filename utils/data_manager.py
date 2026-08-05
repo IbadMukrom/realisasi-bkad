@@ -191,9 +191,17 @@ def load_raw_data(filepath: Optional[str] = None) -> pd.DataFrame:
 def save_data(df: pd.DataFrame, filepath: Optional[str] = None) -> None:
     """
     Menyimpan DataFrame ke Google Sheets (jika dikonfigurasi) dan/atau file Excel lokal.
+    Mendukung penambahan kolom baru secara dinamis (skema fleksibel).
     """
-    save_cols = ["tahun", "nama_opd", "penanggungjawab", "kode_rekening", "jenis_belanja", "bulan", "pagu_anggaran", "realisasi"]
-    existing_cols = [c for c in save_cols if c in df.columns]
+    default_cols = ["tahun", "nama_opd", "penanggungjawab", "kode_rekening", "jenis_belanja", "bulan", "pagu_anggaran", "realisasi"]
+    # Kolom turunan/hitung otomatis yang tidak perlu disimpan ke DB
+    skip_cols = {"nama_bulan", "triwulan", "nama_triwulan", "sisa_anggaran", "persentase_realisasi", "pagu_fmt", "realisasi_fmt", "_select"}
+
+    # Utamakan kolom default dulu, lalu tambahkan kolom kustom baru jika ada
+    existing_cols = [c for c in default_cols if c in df.columns]
+    extra_cols = [c for c in df.columns if c not in default_cols and c not in skip_cols and not c.startswith("_")]
+    existing_cols.extend(extra_cols)
+
     clean_df = df[existing_cols].copy()
 
     if is_gsheets_configured():
