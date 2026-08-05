@@ -236,6 +236,11 @@ if page == "📝 Kelola Data":
         st.markdown('<div class="section-header">➕ Tambah Data Anggaran Baru</div>', unsafe_allow_html=True)
 
         # Session state initialization for money formatting
+        if st.session_state.get("reset_tambah_inputs", False):
+            st.session_state["pagu_raw_key"] = "0"
+            st.session_state["realisasi_raw_key"] = "0"
+            st.session_state["reset_tambah_inputs"] = False
+
         if "pagu_raw_key" not in st.session_state:
             st.session_state["pagu_raw_key"] = "0"
         if "realisasi_raw_key" not in st.session_state:
@@ -337,8 +342,7 @@ if page == "📝 Kelola Data":
                         f"✅ Data berhasil ditambahkan: "
                         f"{final_jenis} - {NAMA_BULAN[input_bulan]} {input_tahun} (Pagu: Rp {format_rupiah_titik(parsed_pagu)})"
                     )
-                    st.session_state["pagu_raw_key"] = "0"
-                    st.session_state["realisasi_raw_key"] = "0"
+                    st.session_state["reset_tambah_inputs"] = True
                     st.cache_data.clear()
                     st.rerun()
                 except ValueError as e:

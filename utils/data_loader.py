@@ -66,15 +66,22 @@ def _process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 def read_smart_excel(source) -> pd.DataFrame:
     """
     Membaca file Excel dengan cerdas: mengutamakan sheet 'Data Realisasi'
-    atau mencari sheet yang memiliki kolom wajib realisasi.
+    atau 'Realisasi Anggaran' yang memiliki kolom wajib realisasi.
     """
     try:
         excel_file = pd.ExcelFile(source)
         sheet_names = excel_file.sheet_names
 
-        # 1. Utamakan sheet "Data Realisasi" jika ada
-        if "Data Realisasi" in sheet_names:
-            return pd.read_excel(source, sheet_name="Data Realisasi")
+        # 1. Utamakan sheet "Data Realisasi" atau "Realisasi Anggaran" jika valid
+        for preferred in ["Data Realisasi", "Realisasi Anggaran"]:
+            if preferred in sheet_names:
+                try:
+                    df_temp = pd.read_excel(source, sheet_name=preferred)
+                    norm_cols = df_temp.columns.str.strip().str.lower().str.replace(" ", "_")
+                    if all(col in norm_cols for col in REQUIRED_COLUMNS):
+                        return df_temp
+                except Exception:
+                    pass
 
         # 2. Periksa sheet lain yang memiliki kolom REQUIRED_COLUMNS
         for sheet in sheet_names:
