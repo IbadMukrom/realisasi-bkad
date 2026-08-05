@@ -701,6 +701,7 @@ elif page == "📊 Dashboard":
             except Exception as e:
                 st.error(f"❌ Error: {e}")
         else:
+            data_path = get_data_path()
             df = load_raw_data(data_path)
             data_source = "📊 Google Sheets" if is_gsheets_configured() else "📄 Data Lokal"
 
