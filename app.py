@@ -484,6 +484,16 @@ if page == "📝 Kelola Data":
     with tab_delete:
         st.markdown('<div class="section-header">🗑️ Hapus Data Anggaran</div>', unsafe_allow_html=True)
 
+        with st.expander("🚨 Zona Bahaya: Kosongkan Seluruh Database (Google Sheets & Lokal)", expanded=False):
+            st.warning("⚠️ Tombol ini akan menghapus **SELURUH DATA** yang ada di Google Sheets dan Lokal hingga 100% kosong.")
+            if st.button("💣 KOSONGKAN SELURUH DATABASE SEKARANG", type="primary", key="btn_wipe_all_db"):
+                empty_cols = ["tahun", "nama_opd", "penanggungjawab", "kode_rekening", "jenis_belanja", "bulan", "pagu_anggaran", "realisasi"]
+                empty_df = pd.DataFrame(columns=empty_cols)
+                save_data(empty_df, data_path)
+                st.cache_data.clear()
+                st.success("✅ Seluruh data di Google Sheets & lokal telah dikosongkan!")
+                st.rerun()
+
         del_data = load_raw_data(data_path)
 
         if del_data.empty:
@@ -691,16 +701,11 @@ elif page == "📊 Dashboard":
             except Exception as e:
                 st.error(f"❌ Error: {e}")
         else:
-            default_path = get_data_path()
-            if os.path.exists(default_path):
-                df = load_data(default_path)
-                data_source = "📄 Data Lokal"
-            else:
-                st.warning("⚠️ Tidak ada data. Tambahkan data melalui halaman Kelola Data.")
-                st.stop()
+            df = load_raw_data(data_path)
+            data_source = "📊 Google Sheets" if is_gsheets_configured() else "📄 Data Lokal"
 
         if df is None or df.empty:
-            st.warning("⚠️ Data kosong. Tambahkan data melalui halaman Kelola Data.")
+            st.info("💡 Belum ada data anggaran. Silakan tambahkan data melalui menu Kelola Data.")
             st.stop()
 
         st.caption(f"Sumber: {data_source}")
