@@ -1,8 +1,9 @@
 """
-Modul untuk mengelola data anggaran — simpan, update, hapus ke file Excel.
+Modul untuk mengelola data anggaran — simpan, update, hapus ke file Excel atau Google Sheets.
 """
 import pandas as pd
 import os
+import streamlit as st
 
 from typing import Optional, List, Dict, Any
 
@@ -29,9 +30,23 @@ NAMA_BULAN = {
 }
 
 
+def is_gsheets_configured() -> bool:
+    """Memeriksa apakah koneksi Google Sheets sudah dikonfigurasi di secrets."""
+    try:
+        return "connections" in st.secrets and "gsheets" in st.secrets["connections"]
+    except Exception:
+        return False
+
+
+def get_gsheets_connection():
+    """Mendapatkan objek koneksi Google Sheets."""
+    from streamlit_gsheets import GSheetsConnection
+    return st.connection("gsheets", type=GSheetsConnection)
+
+
 def get_all_jenis_belanja(filepath: Optional[str] = None) -> List[str]:
     """
-    Mendapatkan daftar seluruh jenis belanja dari file Excel + default options.
+    Mendapatkan daftar seluruh jenis belanja dari Excel/Google Sheets + default options.
     """
     df = load_raw_data(filepath)
     existing = []
@@ -44,7 +59,7 @@ def get_all_jenis_belanja(filepath: Optional[str] = None) -> List[str]:
 
 def get_all_penanggungjawab(filepath: Optional[str] = None) -> List[str]:
     """
-    Mendapatkan daftar Bidang Penanggung Jawab dari file Excel.
+    Mendapatkan daftar Bidang Penanggung Jawab dari Excel/Google Sheets.
     """
     defaults = [
         "Sekretariat",
@@ -66,23 +81,30 @@ def get_data_path() -> str:
     return DEFAULT_FILE
 
 
-from utils.data_loader import read_smart_excel
-
-
 def load_raw_data(filepath: Optional[str] = None) -> pd.DataFrame:
     """
-    Membaca data mentah dari file Excel tanpa caching menggunakan smart Excel reader.
+    Membaca data mentah dari Google Sheets (jika dikonfigurasi) atau dari file Excel.
     """
+    if is_gsheets_configured():
+        try:
+            conn = get_gsheets_connection()
+            df = conn.read(worksheet="Realisasi Anggaran", ttl="0s")
+            df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+            if not df.empty:
+                return df
+        except Exception as e:
+            st.warning(f"⚠️ Gagal membaca Google Sheets, beralih ke data lokal: {e}")
+
     path = filepath or DEFAULT_FILE
     if not os.path.exists(path) or os.path.getsize(path) == 0:
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        # Buat dummy data awal jika belum ada
         try:
             import generate_dummy
         except Exception:
             pass
 
     try:
+        from utils.data_loader import read_smart_excel
         df = read_smart_excel(path)
     except Exception:
         df = pd.read_excel(path)
@@ -92,6 +114,7 @@ def load_raw_data(filepath: Optional[str] = None) -> pd.DataFrame:
     if df.empty:
         try:
             import generate_dummy
+            from utils.data_loader import read_smart_excel
             df = read_smart_excel(path)
             df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
         except Exception:
@@ -102,15 +125,24 @@ def load_raw_data(filepath: Optional[str] = None) -> pd.DataFrame:
 
 def save_data(df: pd.DataFrame, filepath: Optional[str] = None) -> None:
     """
-    Menyimpan DataFrame ke file Excel.
+    Menyimpan DataFrame ke Google Sheets (jika dikonfigurasi) dan/atau file Excel lokal.
     """
-    path = filepath or DEFAULT_FILE
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-
-    # Pastikan kolom yang disimpan benar
     save_cols = ["tahun", "nama_opd", "penanggungjawab", "kode_rekening", "jenis_belanja", "bulan", "pagu_anggaran", "realisasi"]
     existing_cols = [c for c in save_cols if c in df.columns]
-    df[existing_cols].to_excel(path, index=False, sheet_name="Realisasi Anggaran")
+    clean_df = df[existing_cols]
+
+    if is_gsheets_configured():
+        try:
+            conn = get_gsheets_connection()
+            conn.update(worksheet="Realisasi Anggaran", data=clean_df)
+            st.cache_data.clear()
+        except Exception as e:
+            st.error(f"❌ Gagal menyimpan ke Google Sheets: {e}")
+
+    # Simpan juga ke file Excel lokal sebagai cadangan
+    path = filepath or DEFAULT_FILE
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    clean_df.to_excel(path, index=False, sheet_name="Realisasi Anggaran")
 
 
 def add_record(
