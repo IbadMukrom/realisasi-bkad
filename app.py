@@ -297,10 +297,10 @@ if page == "📝 Kelola Data":
                 help="Kode rekening SIPD/SIMDA (opsional)",
             )
             st.text_input(
-                "💰 Pagu Anggaran (Rp)",
+                "💰 Pagu Anggaran Tahunan (Rp)",
                 key="pagu_raw_key",
                 on_change=_on_pagu_change,
-                help="Ketik nominal (contoh: 1000000), titik pemisah ribuan (1.000.000) akan otomatis terformat di dalam kotak",
+                help="Ketik nominal pagu anggaran untuk 1 tahun penuh (contoh: 1000000), titik pemisah ribuan akan otomatis terformat",
                 placeholder="Contoh: 1.000.000 atau 1000000",
             )
             st.text_input(
@@ -767,7 +767,7 @@ elif page == "📊 Dashboard":
     with col1:
         st.markdown(f"""
         <div class="metric-card">
-            <div class="metric-label">💰 Total Pagu Anggaran</div>
+            <div class="metric-label">💰 Total Pagu Tahunan</div>
             <div class="metric-value blue">{format_rupiah(summary['total_pagu'])}</div>
         </div>
         """, unsafe_allow_html=True)
@@ -783,7 +783,7 @@ elif page == "📊 Dashboard":
     with col3:
         st.markdown(f"""
         <div class="metric-card">
-            <div class="metric-label">📉 Sisa Anggaran</div>
+            <div class="metric-label">📉 Sisa Pagu Tahunan</div>
             <div class="metric-value red">{format_rupiah(summary['total_sisa'])}</div>
         </div>
         """, unsafe_allow_html=True)
