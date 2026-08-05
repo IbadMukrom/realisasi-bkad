@@ -63,9 +63,12 @@ def get_data_path() -> str:
     return DEFAULT_FILE
 
 
+from utils.data_loader import read_smart_excel
+
+
 def load_raw_data(filepath: Optional[str] = None) -> pd.DataFrame:
     """
-    Membaca data mentah dari file Excel tanpa caching.
+    Membaca data mentah dari file Excel tanpa caching menggunakan smart Excel reader.
     """
     path = filepath or DEFAULT_FILE
     if not os.path.exists(path):
@@ -78,7 +81,11 @@ def load_raw_data(filepath: Optional[str] = None) -> pd.DataFrame:
         df.to_excel(path, index=False, sheet_name="Realisasi Anggaran")
         return df
 
-    df = pd.read_excel(path)
+    try:
+        df = read_smart_excel(path)
+    except Exception:
+        df = pd.read_excel(path)
+
     df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
     return df
 
