@@ -69,18 +69,28 @@ def get_gsheets_client_and_sheet():
     Mendapatkan objek gspread worksheet dari Google Sheets dengan sanitasi private_key otomatis.
     """
     import gspread
-    sec = dict(st.secrets["connections"]["gsheets"])
-    if "private_key" in sec and isinstance(sec["private_key"], str):
-        sec["private_key"] = fix_private_key(sec["private_key"])
+    from google.oauth2.service_account import Credentials
 
-    spreadsheet_url = sec.get("spreadsheet", "")
-    gc = gspread.service_account_from_dict(sec)
-    
+    sec = dict(st.secrets["connections"]["gsheets"])
+    spreadsheet_url = str(sec.get("spreadsheet", "")).strip()
+
+    creds_dict = {k: v for k, v in sec.items() if k != "spreadsheet"}
+    if "private_key" in creds_dict and isinstance(creds_dict["private_key"], str):
+        creds_dict["private_key"] = fix_private_key(creds_dict["private_key"])
+
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive",
+    ]
+
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+    gc = gspread.authorize(creds)
+
     if spreadsheet_url.startswith("http"):
         sh = gc.open_by_url(spreadsheet_url)
     else:
         sh = gc.open(spreadsheet_url)
-        
+
     try:
         ws = sh.worksheet("Realisasi Anggaran")
     except Exception:
@@ -138,7 +148,7 @@ def load_raw_data(filepath: Optional[str] = None) -> pd.DataFrame:
             except Exception:
                 df = pd.DataFrame()
 
-            if not df.empty and all(c in df.columns for c in ["tahun", "jenis_belanja"]):
+            if not df.empty and any(c in df.columns for c in ["tahun", "jenis_belanja", "Tahun", "Jenis Belanja"]):
                 df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
                 return df
 
@@ -152,13 +162,16 @@ def load_raw_data(filepath: Optional[str] = None) -> pd.DataFrame:
                     save_data(local_df)
                     return local_df
         except Exception as e:
-            err_msg = str(e)
-            if "403" in err_msg or "PERMISSION_DENIED" in err_msg:
-                st.warning("⚠️ **Akses Google Sheet Ditolak (403)**: Pastikan Anda telah Share (bagikan) Google Sheet ke email `streamlit-gsheets@realisasi-bkad.iam.gserviceaccount.com` dengan akses **Editor**.")
-            elif "API has not been used" in err_msg or "disabled" in err_msg:
-                st.warning("⚠️ **Google Sheets API Belum Aktif**: Buka Google Cloud Console dan aktifkan (Enable) **Google Sheets API** & **Google Drive API**.")
+            err_name = type(e).__name__
+            err_msg = str(e).strip() or repr(e)
+            full_err = f"{err_name}: {err_msg}"
+            
+            if "403" in full_err or "PERMISSION_DENIED" in full_err or "permission" in full_err.lower():
+                st.warning("⚠️ **Akses Google Sheet Ditolak (403)**: Pastikan Anda telah membagikan (Share) Google Sheet `1W5jizc3NwmMjbOtMcdh_ZjjhYu24N1EmU5zGWypYxTI` ke email Service Account: `streamlit-gsheets@realisasi-bkad.iam.gserviceaccount.com` dengan hak akses **Editor**.")
+            elif "API has not been used" in full_err or "disabled" in full_err:
+                st.warning("⚠️ **Google Sheets API / Drive API Belum Aktif**: Silakan buka Google Cloud Console dan aktifkan (Enable) **Google Sheets API** & **Google Drive API**.")
             else:
-                st.warning(f"⚠️ Gagal membaca Google Sheets, beralih ke data lokal: {e}")
+                st.warning(f"⚠️ Gagal membaca Google Sheets ({full_err}), beralih ke data lokal.")
 
     path = filepath or DEFAULT_FILE
     if not os.path.exists(path) or os.path.getsize(path) == 0:
