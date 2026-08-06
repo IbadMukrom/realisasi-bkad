@@ -812,36 +812,15 @@ elif page == "📊 Dashboard":
 
     # ── Sidebar Filters ──
     with st.sidebar:
-        st.markdown("## ⚙️ Pengaturan Data")
-
-        uploaded_file = st.file_uploader(
-            "📁 Upload File Excel",
-            type=["xlsx", "xls"],
-            help="Upload file Excel dengan kolom: tahun, nama_opd, jenis_belanja, bulan, pagu_anggaran, realisasi",
-        )
-
-        st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
-
-        df = None
-        data_source = ""
-
-        if uploaded_file is not None:
-            try:
-                df = load_uploaded_data(uploaded_file)
-                data_source = f"📄 {uploaded_file.name}"
-                st.success(f"✅ Data dimuat: {len(df)} baris")
-            except Exception as e:
-                st.error(f"❌ Error: {e}")
-        else:
-            data_path = get_data_path()
-            df = load_data(data_path)
-            data_source = "📊 Google Sheets" if is_gsheets_configured() else "📄 Data Lokal"
+        data_path = get_data_path()
+        df = load_data(data_path)
+        data_source = "📊 Google Sheets" if is_gsheets_configured() else "📄 Data Database / Lokal"
 
         if df is None or df.empty:
-            st.info("💡 Belum ada data anggaran. Silakan tambahkan data melalui menu Kelola Data.")
+            st.info("💡 Belum ada data anggaran. Silakan login ke menu Kelola Data untuk menginput/mengupload data.")
             st.stop()
 
-        st.caption(f"Sumber: {data_source}")
+        st.caption(f"Sumber Data: {data_source}")
         st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
 
         st.markdown("## 🔍 Filter")
