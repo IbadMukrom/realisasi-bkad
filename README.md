@@ -19,7 +19,7 @@ Dashboard Realisasi Anggaran BKAD adalah aplikasi web berbasis **Streamlit** yan
 - **Memvisualisasikan** data realisasi anggaran Badan Keuangan dan Aset Daerah (BKAD)
 - **Mengelola** data anggaran (tambah, edit, hapus)
 - **Menganalisis** tren dan capaian realisasi per jenis belanja
-- **Mengunduh** data dan laporan dalam format CSV
+- **Mengunduh** laporan resmi terformat dalam format **PDF** dan **Excel**
 
 ### Fitur Utama
 
@@ -31,11 +31,11 @@ Dashboard Realisasi Anggaran BKAD adalah aplikasi web berbasis **Streamlit** yan
 | 📊 Perbandingan Belanja | Bar chart pagu vs realisasi per jenis belanja |
 | 🥧 Komposisi Belanja | Donut chart proporsi realisasi |
 | 🗓️ Heatmap | Persentase realisasi per jenis belanja per bulan |
-| ➕ Input Data | Form tambah data baru |
-| ✏️ Edit Data | Tabel interaktif untuk edit data |
-| 🗑️ Hapus Data | Hapus data per baris atau bulk |
-| 📁 Upload Excel | Upload file Excel untuk mengganti data |
-| 📥 Download | Export data ke CSV |
+| ➕ Input Data | Form tambah data baru dengan auto-format titik ribuan |
+| ✏️ Edit Data | Tabel interaktif st.data_editor untuk edit data instan |
+| 🗑️ Hapus Data | Hapus data per baris atau Zona Bahaya pengosongan database |
+| 📁 Upload Excel | Dual Mode Upload (Mode Upsert / Mode Replace All) + Sanitasi Data |
+| 📄 Download Laporan | Unduh Laporan Resmi berformat PDF (KOP BKAD) & Excel terformat |
 
 ---
 

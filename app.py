@@ -1257,12 +1257,19 @@ elif page == "📖 Panduan":
         - **Donut Chart & Heatmap** — Proporsi realisasi dan peta warna intensitas realisasi bulanan.
         """)
 
+    with st.expander("📄 Unduh Laporan Resmi (PDF & Excel)", expanded=False):
+        st.markdown("""
+        Di bagian paling bawah halaman Dashboard, Anda dapat mengunduh laporan realisasi resmi dalam 2 format:
+        - **📄 Download Laporan PDF** — Dokumen PDF terformat resmi (KOP BKAD, Ringkasan Eksekutif, dan Tabel Detail berformat Lanskap A4 siap cetak).
+        - **📊 Download Laporan Excel** — File Excel terformat lengkap dengan styling header, border, dan formula angka.
+        """)
+
     st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
 
     # ──────────────────────────────────────────────────────────────────────
     # SECTION 3: KELOLA DATA
     # ──────────────────────────────────────────────────────────────────────
-    st.markdown('<div class="section-header" id="3-kelola-data">3️⃣ Kelola Data (CRUD)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header" id="3-kelola-data">3️⃣ Kelola Data (CRUD & Upload)</div>', unsafe_allow_html=True)
 
     with st.expander("➕ Form Tambah Data (Auto-Format Titik)", expanded=True):
         st.markdown("""
@@ -1288,10 +1295,13 @@ elif page == "📖 Panduan":
         5. Klik **💾 Simpan Perubahan**.
         """)
 
-    with st.expander("🗑️ Tab Hapus Data & 📁 Upload Excel", expanded=True):
+    with st.expander("🗑️ Tab Hapus Data & 📁 Upload Excel (Dual Mode)", expanded=True):
         st.markdown("""
-        - **Hapus Data**: Pilih baris tertentu atau hapus data terfilter.
-        - **Upload Excel**: Timpa seluruh data dengan file Excel SIPD baru.
+        - **Hapus Data**: Hapus data per baris terpilih atau gunakan *Zona Bahaya* untuk mengosongkan seluruh database.
+        - **Upload Excel (Dual Mode)**:
+          - **Mode 1: Perbarui & Tambah Data (Upsert)** — Memperbarui nilai jika data sudah ada, dan menambahkan data baru tanpa menghapus data lama.
+          - **Mode 2: Ganti Seluruh Data (Replace All)** — Menghapus seluruh data lama dan menggantinya 100% dengan isi file Excel baru.
+          - Ditengkapi **Sanitasi & Validasi Otomatis** untuk membersihkan spasi berlebih dan memvalidasi tipe data numerik.
         """)
 
     st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
