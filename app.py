@@ -45,6 +45,7 @@ from utils.data_manager import (
     get_all_penanggungjawab,
     is_gsheets_configured,
     generate_formatted_excel_report,
+    generate_formatted_pdf_report,
     JENIS_BELANJA_OPTIONS,
 )
 from utils.auth import (
@@ -1110,13 +1111,13 @@ elif page == "📊 Dashboard":
 
     # ── Download ──
     st.markdown("")
-    col_dl1, col_dl2, col_dl3 = st.columns([1.5, 1, 1])
+    col_dl1, col_dl2, col_dl3 = st.columns([1.5, 1.5, 1])
 
     with col_dl1:
         try:
             excel_report_bytes = generate_formatted_excel_report(df_filtered, summary, selected_tahun)
             st.download_button(
-                label="📊 Download Laporan Resmi (Excel Terformat)",
+                label="📊 Download Laporan Excel",
                 data=excel_report_bytes,
                 file_name=f"laporan_realisasi_bkad_{selected_tahun}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -1127,9 +1128,23 @@ elif page == "📊 Dashboard":
             st.error(f"❌ Gagal membuat Laporan Excel: {e}")
 
     with col_dl2:
+        try:
+            pdf_report_bytes = generate_formatted_pdf_report(df_filtered, summary, selected_tahun)
+            st.download_button(
+                label="📄 Download Laporan PDF",
+                data=pdf_report_bytes,
+                file_name=f"laporan_realisasi_bkad_{selected_tahun}.pdf",
+                mime="application/pdf",
+                type="primary",
+                use_container_width=True,
+            )
+        except Exception as e:
+            st.error(f"❌ Gagal membuat Laporan PDF: {e}")
+
+    with col_dl3:
         csv_summary = latest_detail.to_csv(index=False).encode("utf-8")
         st.download_button(
-            label="📥 Download Ringkasan (CSV)",
+            label="📥 Download Data CSV",
             data=csv_summary,
             file_name=f"ringkasan_bkad_{selected_tahun}.csv",
             mime="text/csv",

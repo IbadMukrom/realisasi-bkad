@@ -3,6 +3,7 @@ Modul untuk membuat chart Plotly untuk dashboard realisasi anggaran BKAD.
 """
 import plotly.graph_objects as go
 import pandas as pd
+from typing import Any
 from utils.data_loader import NAMA_BULAN
 
 

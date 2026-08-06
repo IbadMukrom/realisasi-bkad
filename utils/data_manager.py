@@ -5,7 +5,7 @@ import pandas as pd
 import os
 import streamlit as st
 
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 DEFAULT_FILE = os.path.join(DATA_DIR, "dummy_data.xlsx")
@@ -537,3 +537,204 @@ def generate_formatted_excel_report(df_filtered: pd.DataFrame, summary: dict, ta
     output = io.BytesIO()
     wb.save(output)
     return output.getvalue()
+
+
+def generate_formatted_pdf_report(df_filtered: pd.DataFrame, summary: dict, tahun: int) -> bytes:
+    """
+    Menghasilkan laporan resmi Realisasi Anggaran BKAD berformat PDF.
+    """
+    import io
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_RIGHT
+    from utils.charts import format_rupiah_titik
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=landscape(A4),
+        rightMargin=36,
+        leftMargin=36,
+        topMargin=36,
+        bottomMargin=36,
+    )
+
+    styles = getSampleStyleSheet()
+
+    title_style = ParagraphStyle(
+        'DocTitle',
+        parent=styles['Heading1'],
+        fontName='Helvetica-Bold',
+        fontSize=16,
+        leading=20,
+        alignment=TA_CENTER,
+        textColor=colors.HexColor('#1B2838'),
+    )
+
+    subtitle_style = ParagraphStyle(
+        'DocSubTitle',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=11,
+        leading=14,
+        alignment=TA_CENTER,
+        textColor=colors.HexColor('#2C3E50'),
+    )
+
+    meta_style = ParagraphStyle(
+        'DocMeta',
+        parent=styles['Normal'],
+        fontName='Helvetica-Oblique',
+        fontSize=9,
+        leading=12,
+        alignment=TA_CENTER,
+        textColor=colors.HexColor('#555555'),
+    )
+
+    h2_style = ParagraphStyle(
+        'SectionHeading',
+        parent=styles['Heading2'],
+        fontName='Helvetica-Bold',
+        fontSize=11,
+        leading=14,
+        textColor=colors.HexColor('#1B2838'),
+        spaceAfter=6,
+    )
+
+    cell_style = ParagraphStyle(
+        'TableCell',
+        fontName='Helvetica',
+        fontSize=8,
+        leading=10,
+        textColor=colors.HexColor('#2C3E50'),
+    )
+
+    cell_bold = ParagraphStyle(
+        'CellBold',
+        fontName='Helvetica-Bold',
+        fontSize=8,
+        leading=10,
+        textColor=colors.HexColor('#1B2838'),
+    )
+
+    header_cell = ParagraphStyle(
+        'HeaderCell',
+        fontName='Helvetica-Bold',
+        fontSize=8,
+        leading=10,
+        alignment=TA_CENTER,
+        textColor=colors.white,
+    )
+
+    elements = []
+
+    # Title Block
+    elements.append(Paragraph("BADAN KEUANGAN DAN ASET DAERAH (BKAD)", title_style))
+    elements.append(Spacer(1, 4))
+    elements.append(Paragraph(f"LAPORAN REALISASI ANGGARAN TAHUN {tahun}", subtitle_style))
+    elements.append(Spacer(1, 2))
+
+    latest_bln_name = NAMA_BULAN.get(summary.get("latest_bulan", 1), "")
+    elements.append(Paragraph(f"Posisi Data s.d. Bulan {latest_bln_name} {tahun}", meta_style))
+    elements.append(Spacer(1, 8))
+    elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#00E676'), spaceBefore=2, spaceAfter=10))
+
+    # Executive Summary Card Table
+    pagu_str = f"Rp {format_rupiah_titik(summary.get('total_pagu', 0.0))}"
+    real_str = f"Rp {format_rupiah_titik(summary.get('total_realisasi', 0.0))}"
+    sisa_str = f"Rp {format_rupiah_titik(summary.get('total_sisa', 0.0))}"
+    pct_str = f"{summary.get('persentase', 0.0):.2f}%"
+
+    sum_data = [
+        [
+            Paragraph("<b>Total Pagu Tahunan</b>", cell_bold),
+            Paragraph(pagu_str, cell_bold),
+            Paragraph("<b>Total Realisasi Kumulatif</b>", cell_bold),
+            Paragraph(real_str, cell_bold),
+        ],
+        [
+            Paragraph("<b>Total Sisa Anggaran</b>", cell_bold),
+            Paragraph(sisa_str, cell_bold),
+            Paragraph("<b>Persentase Capaian</b>", cell_bold),
+            Paragraph(pct_str, cell_bold),
+        ],
+    ]
+
+    sum_table = Table(sum_data, colWidths=[140, 180, 140, 180])
+    sum_table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#F4F6F9')),
+        ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#CBD5E1')),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E2E8F0')),
+        ('PADDING', (0,0), (-1,-1), 6),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+    ]))
+    elements.append(sum_table)
+    elements.append(Spacer(1, 14))
+
+    # Main Detail Table
+    elements.append(Paragraph("Daftar Detail Realisasi Sub-Kegiatan BKAD:", h2_style))
+
+    table_data = [
+        [
+            Paragraph("No", header_cell),
+            Paragraph("Kode Rekening", header_cell),
+            Paragraph("Penanggung Jawab", header_cell),
+            Paragraph("Sub-Kegiatan / Uraian", header_cell),
+            Paragraph("Pagu Anggaran", header_cell),
+            Paragraph("Realisasi Kumulatif", header_cell),
+            Paragraph("Sisa Anggaran", header_cell),
+            Paragraph("% Capaian", header_cell),
+        ]
+    ]
+
+    group_cols = ["jenis_belanja"]
+    if "penanggungjawab" in df_filtered.columns:
+        group_cols.insert(0, "penanggungjawab")
+    if "kode_rekening" in df_filtered.columns:
+        group_cols.insert(0, "kode_rekening")
+
+    idx = df_filtered.groupby(group_cols, dropna=False)["bulan"].idxmax()
+    latest_detail = df_filtered.loc[idx].copy()
+    real_col = "realisasi_kumulatif" if "realisasi_kumulatif" in latest_detail.columns else "realisasi"
+    latest_detail = latest_detail.sort_values("pagu_anggaran", ascending=False)
+
+    right_cell = ParagraphStyle('RCell', parent=cell_style, alignment=TA_RIGHT)
+    center_cell = ParagraphStyle('CCell', parent=cell_style, alignment=TA_CENTER)
+
+    for row_num, (_, row) in enumerate(latest_detail.iterrows(), 1):
+        kode = str(row.get("kode_rekening", "")).replace(".0", "")
+        pj = str(row.get("penanggungjawab", "Sekretariat"))
+        jenis = str(row.get("jenis_belanja", ""))
+        pagu = float(row.get("pagu_anggaran", 0.0))
+        real = float(row.get(real_col, 0.0))
+        sisa = pagu - real
+        pct = (real / pagu * 100) if pagu > 0 else 0.0
+
+        table_data.append([
+            Paragraph(str(row_num), center_cell),
+            Paragraph(kode, center_cell),
+            Paragraph(pj, cell_style),
+            Paragraph(jenis, cell_style),
+            Paragraph(f"Rp {format_rupiah_titik(pagu)}", right_cell),
+            Paragraph(f"Rp {format_rupiah_titik(real)}", right_cell),
+            Paragraph(f"Rp {format_rupiah_titik(sisa)}", right_cell),
+            Paragraph(f"{pct:.2f}%", center_cell),
+        ])
+
+    pdf_table = Table(table_data, colWidths=[24, 75, 110, 240, 95, 95, 95, 45], repeatRows=1)
+    pdf_table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1B2838')),
+        ('ALIGN', (0,0), (-1,0), 'CENTER'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CBD5E1')),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#F8FAFC')]),
+        ('PADDING', (0,0), (-1,-1), 4),
+    ]))
+
+    elements.append(pdf_table)
+
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer.getvalue()
