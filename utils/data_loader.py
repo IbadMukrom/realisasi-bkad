@@ -199,7 +199,6 @@ def get_summary(df: pd.DataFrame) -> dict:
     Menghitung ringkasan data:
     - Total Pagu Tahunan: Pagu tetap (diambil 1x per item unik per tahun, tidak terakumulasi antar bulan).
     - Total Realisasi: Realisasi kumulatif terakumulasi s.d. bulan terakhir.
-    - Evaluasi Target KPI.
     """
     if df.empty:
         return {
@@ -208,8 +207,6 @@ def get_summary(df: pd.DataFrame) -> dict:
             "total_sisa": 0.0,
             "persentase": 0.0,
             "latest_bulan": 1,
-            "target_kpi": 5.0,
-            "underperforming_count": 0,
         }
 
     item_cols = [c for c in ["tahun", "penanggungjawab", "kode_rekening", "jenis_belanja"] if c in df.columns]
@@ -226,11 +223,6 @@ def get_summary(df: pd.DataFrame) -> dict:
     total_realisasi = latest[real_col].sum()
 
     latest_bulan = int(latest["bulan"].max()) if not latest.empty and "bulan" in latest.columns else 1
-    target_kpi = TARGET_BULANAN.get(latest_bulan, 100.0)
-
-    # Hitung jumlah sub-kegiatan yang di bawah target KPI
-    latest["item_pct"] = (latest[real_col] / latest["pagu_anggaran"].replace(0, 1) * 100).round(2)
-    underperforming = latest[latest["item_pct"] < target_kpi]
 
     total_sisa = max(0.0, total_pagu - total_realisasi)
     persentase = (total_realisasi / total_pagu * 100) if total_pagu > 0 else 0.0
@@ -241,8 +233,6 @@ def get_summary(df: pd.DataFrame) -> dict:
         "total_sisa": total_sisa,
         "persentase": round(persentase, 2),
         "latest_bulan": latest_bulan,
-        "target_kpi": target_kpi,
-        "underperforming_count": len(underperforming),
     }
 
 
@@ -463,17 +453,12 @@ def get_executive_insights(df: pd.DataFrame, summary: dict) -> dict:
             top_pj_row = pj_agg.iloc[0]
 
     latest_bln_name = NAMA_BULAN.get(summary.get("latest_bulan", 1), "berjalan")
-    target_kpi = summary.get("target_kpi", 100.0)
     total_pct = summary.get("persentase", 0.0)
 
     bullets = []
 
-    # Bullet 1: Ringkasan Capaian vs Target
-    if total_pct >= target_kpi:
-        bullets.append(f"Capaian realisasi keseluruhan s.d. bulan **{latest_bln_name}** mencapai **{total_pct:.2f}%**, telah **memenuhi target KPI** ({target_kpi}%).")
-    else:
-        diff = target_kpi - total_pct
-        bullets.append(f"Capaian realisasi keseluruhan s.d. bulan **{latest_bln_name}** mencapai **{total_pct:.2f}%**, selisih **{diff:.2f}%** di bawah target KPI ({target_kpi}%).")
+    # Bullet 1: Ringkasan Capaian Overall
+    bullets.append(f"Capaian realisasi keseluruhan s.d. bulan **{latest_bln_name}** mencapai **{total_pct:.2f}%** dari total pagu anggaran.")
 
     # Bullet 2: Sub-kegiatan tertinggi
     if top_sub_row is not None:
@@ -485,7 +470,7 @@ def get_executive_insights(df: pd.DataFrame, summary: dict) -> dict:
     if lowest_sub_row is not None and len(sorted_sub) > 1:
         low_name = lowest_sub_row["jenis_belanja"]
         low_pct = lowest_sub_row["persentase"]
-        bullets.append(f"Sub-kegiatan yang membutuhkan perhatian khusus/percepatan adalah **{low_name}** (**{low_pct:.2f}%**).")
+        bullets.append(f"Sub-kegiatan dengan capaian terendah saat ini adalah **{low_name}** (**{low_pct:.2f}%**).")
 
     # Bullet 4: Bidang terbaik
     if top_pj_row is not None:

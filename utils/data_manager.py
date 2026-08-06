@@ -348,19 +348,19 @@ def generate_formatted_excel_report(df_filtered: pd.DataFrame, summary: dict, ta
     )
 
     # 1. Title Block
-    ws.merge_cells("A1:I1")
+    ws.merge_cells("A1:H1")
     ws["A1"] = "BADAN KEUANGAN DAN ASET DAERAH (BKAD)"
     ws["A1"].font = TITLE_FONT
     ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
 
-    ws.merge_cells("A2:I2")
-    ws["A2"] = f"LAPORAN EVALUASI REALISASI ANGGARAN TAHUN {tahun}"
+    ws.merge_cells("A2:H2")
+    ws["A2"] = f"LAPORAN REALISASI ANGGARAN TAHUN {tahun}"
     ws["A2"].font = Font(name="Arial", size=12, bold=True, color="2C3E50")
     ws["A2"].alignment = Alignment(horizontal="center", vertical="center")
 
     latest_bln_name = NAMA_BULAN.get(summary.get("latest_bulan", 1), "")
-    ws.merge_cells("A3:I3")
-    ws["A3"] = f"Posisi Data s.d. Bulan {latest_bln_name} {tahun} | Target KPI: {summary.get('target_kpi', 100.0)}%"
+    ws.merge_cells("A3:H3")
+    ws["A3"] = f"Posisi Data s.d. Bulan {latest_bln_name} {tahun}"
     ws["A3"].font = SUBTITLE_FONT
     ws["A3"].alignment = Alignment(horizontal="center", vertical="center")
 
@@ -388,7 +388,7 @@ def generate_formatted_excel_report(df_filtered: pd.DataFrame, summary: dict, ta
     headers = [
         "No", "Kode Rekening", "Penanggung Jawab", "Sub-Kegiatan / Uraian",
         "Pagu Anggaran (Rp)", "Realisasi Kumulatif (Rp)", "Sisa Anggaran (Rp)",
-        "% Capaian", "Evaluasi KPI"
+        "% Capaian"
     ]
 
     for c_idx, h in enumerate(headers, 1):
@@ -409,8 +409,6 @@ def generate_formatted_excel_report(df_filtered: pd.DataFrame, summary: dict, ta
     real_col = "realisasi_kumulatif" if "realisasi_kumulatif" in latest_detail.columns else "realisasi"
     latest_detail = latest_detail.sort_values("pagu_anggaran", ascending=False)
 
-    target_kpi = summary.get("target_kpi", 100.0)
-
     for row_num, (_, row) in enumerate(latest_detail.iterrows(), 1):
         r += 1
         kode = str(row.get("kode_rekening", "")).replace(".0", "")
@@ -420,13 +418,6 @@ def generate_formatted_excel_report(df_filtered: pd.DataFrame, summary: dict, ta
         real = float(row.get(real_col, 0.0))
         sisa = pagu - real
         pct = (real / pagu * 100) if pagu > 0 else 0.0
-
-        if pct >= target_kpi:
-            eval_str = "Sesuai Target"
-        elif pct >= max(0.0, target_kpi - 5.0):
-            eval_str = "Mendekati Target"
-        else:
-            eval_str = "Di Bawah Target"
 
         ws.cell(row=r, column=1, value=row_num).alignment = Alignment(horizontal="center")
         ws.cell(row=r, column=2, value=kode).alignment = Alignment(horizontal="center")
@@ -445,10 +436,7 @@ def generate_formatted_excel_report(df_filtered: pd.DataFrame, summary: dict, ta
         c_pct = ws.cell(row=r, column=8, value=pct / 100.0)
         c_pct.number_format = "0.00%"
 
-        c_eval = ws.cell(row=r, column=9, value=eval_str)
-        c_eval.alignment = Alignment(horizontal="center")
-
-        for col_i in range(1, 10):
+        for col_i in range(1, 9):
             cell_item = ws.cell(row=r, column=col_i)
             cell_item.border = THIN_BORDER
             cell_item.font = REGULAR_FONT

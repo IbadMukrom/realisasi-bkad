@@ -81,28 +81,20 @@ def _merged_layout(**overrides) -> dict:
     return merged
 
 
-def create_gauge_chart(percentage: float, target_percentage: float = 100.0, title: str = "Capaian Realisasi") -> go.Figure:
+def create_gauge_chart(percentage: float, title: str = "Capaian Realisasi") -> go.Figure:
     """
-    Membuat gauge chart persentase capaian realisasi dengan garis batas target KPI.
+    Membuat gauge chart persentase capaian realisasi.
     """
-    if percentage >= target_percentage:
+    if percentage >= 80:
         bar_color = COLORS["primary"]
-    elif percentage >= max(0.0, target_percentage - 10.0):
+    elif percentage >= 50:
         bar_color = COLORS["warning"]
     else:
         bar_color = COLORS["accent"]
 
     fig = go.Figure(go.Indicator(
-        mode="gauge+number+delta",
+        mode="gauge+number",
         value=percentage,
-        delta=dict(
-            reference=target_percentage,
-            position="bottom",
-            increasing=dict(color=COLORS["primary"]),
-            decreasing=dict(color=COLORS["accent"]),
-            valueformat=".2f",
-            suffix="%",
-        ),
         number=dict(suffix="%", font=dict(size=42, color=COLORS["text"])),
         title=dict(text="", font=dict(size=1)),
         gauge=dict(
@@ -115,11 +107,6 @@ def create_gauge_chart(percentage: float, target_percentage: float = 100.0, titl
             bar=dict(color=bar_color, thickness=0.75),
             bgcolor="rgba(255,255,255,0.05)",
             borderwidth=0,
-            threshold=dict(
-                line=dict(color="#F1C40F", width=3),
-                thickness=0.8,
-                value=target_percentage,
-            ),
         ),
     ))
 

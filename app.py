@@ -871,25 +871,14 @@ elif page == "📊 Dashboard":
 
     # ── Summary Metrics ──
     summary = get_summary(df_filtered)
-    target_kpi = summary.get("target_kpi", 100.0)
     latest_bln_name = NAMA_BULAN.get(summary.get("latest_bulan", 1), "")
 
     # ── Executive Summary & Insight Card ──
     insights = get_executive_insights(df_filtered, summary)
     with st.expander("💡 Executive Summary & Insight Naratif Otomatis", expanded=True):
-        col_ins1, col_ins2 = st.columns([2.5, 1])
-        with col_ins1:
-            st.markdown("#### 📌 Ringkasan Eksekutif & Analisis Data")
-            for b in insights["bullets"]:
-                st.markdown(f"- {b}")
-        with col_ins2:
-            st.markdown("#### 🎯 Performa Target KPI")
-            st.metric(
-                label=f"Target KPI ({latest_bln_name})",
-                value=f"{target_kpi}%",
-                delta=f"{summary['persentase'] - target_kpi:.2f}%",
-            )
-            st.caption(f"Status: **{'🟢 Sesuai Target' if summary['persentase'] >= target_kpi else '🔴 Di Bawah Target'}**")
+        st.markdown("#### 📌 Ringkasan Eksekutif & Analisis Data")
+        for b in insights["bullets"]:
+            st.markdown(f"- {b}")
 
     st.markdown("")
 
@@ -921,19 +910,19 @@ elif page == "📊 Dashboard":
 
     with col4:
         pct = summary['persentase']
-        if pct >= target_kpi:
+        if pct >= 80:
             badge_class = "status-good"
-            badge_text = f"🟢 Memenuhi Target ({target_kpi}%)"
-        elif pct >= max(0.0, target_kpi - 5.0):
+            badge_text = "Baik"
+        elif pct >= 50:
             badge_class = "status-warning"
-            badge_text = f"🟡 Mendekati Target ({target_kpi}%)"
+            badge_text = "Cukup"
         else:
             badge_class = "status-danger"
-            badge_text = f"🔴 Di Bawah Target ({target_kpi}%)"
+            badge_text = "Rendah"
 
         st.markdown(f"""
         <div class="metric-card">
-            <div class="metric-label">📊 Capaian vs Target ({latest_bln_name})</div>
+            <div class="metric-label">📊 Persentase Realisasi ({latest_bln_name})</div>
             <div class="metric-value orange">{pct:.2f}%</div>
             <span class="status-badge {badge_class}">{badge_text}</span>
         </div>
@@ -941,17 +930,12 @@ elif page == "📊 Dashboard":
 
     st.markdown("")
 
-    if summary.get("underperforming_count", 0) > 0:
-        st.warning(
-            f"🚨 **Peringatan Evaluasi KPI**: Terdapat **{summary['underperforming_count']}** Sub-Kegiatan yang realisasinya belum mencapai target s.d. bulan {latest_bln_name} (Target KPI: **{target_kpi}%**)."
-        )
-
     # ── Gauge + Trend ──
     col_gauge, col_trend = st.columns([1, 2.5])
 
     with col_gauge:
-        st.markdown('<div class="section-header">🎯 Capaian vs Target KPI</div>', unsafe_allow_html=True)
-        gauge_fig = create_gauge_chart(summary["persentase"], target_percentage=target_kpi)
+        st.markdown('<div class="section-header">🎯 Capaian Realisasi</div>', unsafe_allow_html=True)
+        gauge_fig = create_gauge_chart(summary["persentase"])
         st.plotly_chart(gauge_fig, use_container_width=True, config={"displayModeBar": False})
 
     with col_trend:
@@ -1038,15 +1022,6 @@ elif page == "📊 Dashboard":
         .fillna(0)
     )
 
-    def eval_status(val):
-        if val >= target_kpi:
-            return "🟢 Sesuai Target"
-        elif val >= max(0.0, target_kpi - 5.0):
-            return "🟡 Mendekati Target"
-        else:
-            return "🔴 Di Bawah Target"
-
-    latest_detail["status_kpi"] = latest_detail["persentase"].apply(eval_status)
     latest_detail = latest_detail.sort_values("pagu_anggaran", ascending=False)
 
     latest_detail["pagu_fmt"] = latest_detail["pagu_anggaran"].apply(format_rupiah)
@@ -1065,14 +1040,13 @@ elif page == "📊 Dashboard":
         cols_to_show.append("penanggungjawab")
         col_rename["penanggungjawab"] = "Penanggung Jawab"
 
-    cols_to_show.extend(["jenis_belanja", "pagu_fmt", "realisasi_fmt", "sisa_fmt", "persentase_fmt", "status_kpi"])
+    cols_to_show.extend(["jenis_belanja", "pagu_fmt", "realisasi_fmt", "sisa_fmt", "persentase_fmt"])
     col_rename.update({
         "jenis_belanja": "Sub-Kegiatan / Uraian",
         "pagu_fmt": "Pagu Anggaran",
         "realisasi_fmt": "Realisasi (Kumulatif)",
         "sisa_fmt": "Sisa Anggaran",
         "persentase_fmt": "% Capaian",
-        "status_kpi": f"Evaluasi KPI (Target: {target_kpi}%)",
     })
 
     display_table = latest_detail[cols_to_show].rename(columns=col_rename)
