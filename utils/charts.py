@@ -31,7 +31,7 @@ LAYOUT_DEFAULTS = dict(
     paper_bgcolor="rgba(0,0,0,0)",
     plot_bgcolor="rgba(0,0,0,0)",
     font=dict(color=COLORS["text"], family="Inter, sans-serif"),
-    margin=dict(l=20, r=20, t=40, b=20),
+    margin=dict(l=20, r=30, t=20, b=20),
     separators=",.",
     legend=dict(
         bgcolor="rgba(0,0,0,0)",
@@ -104,7 +104,7 @@ def create_gauge_chart(percentage: float, target_percentage: float = 100.0, titl
             suffix="%",
         ),
         number=dict(suffix="%", font=dict(size=42, color=COLORS["text"])),
-        title=dict(text=title, font=dict(size=16, color=COLORS["text_muted"])),
+        title=dict(text="", font=dict(size=1)),
         gauge=dict(
             axis=dict(
                 range=[0, 100],
@@ -138,7 +138,6 @@ def create_trend_chart(
     if mode == "bulanan":
         x_col = "nama_bulan"
         y_col = "realisasi_kumulatif"
-        title = "📈 Tren Realisasi Kumulatif Bulanan"
         x_order = [
             "Januari", "Februari", "Maret", "April", "Mei", "Juni",
             "Juli", "Agustus", "September", "Oktober", "November", "Desember"
@@ -146,7 +145,6 @@ def create_trend_chart(
     else:
         x_col = "nama_triwulan"
         y_col = "realisasi_kumulatif"
-        title = "📈 Tren Realisasi Kumulatif per Triwulan"
         x_order = [
             "Triwulan I (Jan-Mar)", "Triwulan II (Apr-Jun)",
             "Triwulan III (Jul-Sep)", "Triwulan IV (Okt-Des)",
@@ -170,7 +168,7 @@ def create_trend_chart(
 
     fig.update_layout(
         **_merged_layout(
-            title=dict(text=title, font=dict(size=16)),
+            title="",
             xaxis=dict(
                 categoryorder="array",
                 categoryarray=x_order,
@@ -183,7 +181,8 @@ def create_trend_chart(
                 title="",
                 tickformat=",.0f",
             ),
-            height=400,
+            margin=dict(l=20, r=20, t=20, b=20),
+            height=360,
             showlegend=False,
         )
     )
@@ -226,6 +225,7 @@ def create_belanja_comparison(belanja_df: pd.DataFrame) -> go.Figure:
 
     fig.update_layout(
         **_merged_layout(
+            title="",
             legend=dict(
                 orientation="h",
                 yanchor="bottom",
@@ -233,8 +233,8 @@ def create_belanja_comparison(belanja_df: pd.DataFrame) -> go.Figure:
                 xanchor="right",
                 x=1,
             ),
-            title=dict(text="📊 Perbandingan Pagu vs Realisasi per Jenis Belanja / Sub-Kegiatan", font=dict(size=16)),
             barmode="group",
+            margin=dict(l=20, r=50, t=30, b=20),
             xaxis=dict(
                 showgrid=True,
                 gridcolor="rgba(255,255,255,0.05)",
@@ -245,7 +245,7 @@ def create_belanja_comparison(belanja_df: pd.DataFrame) -> go.Figure:
                 showgrid=False,
                 autorange="reversed",
             ),
-            height=max(400, len(belanja_df) * 40 + 100),
+            height=max(360, len(belanja_df) * 45 + 80),
         )
     )
 
@@ -285,6 +285,7 @@ def create_pj_comparison(pj_df: pd.DataFrame) -> go.Figure:
 
     fig.update_layout(
         **_merged_layout(
+            title="",
             legend=dict(
                 orientation="h",
                 yanchor="bottom",
@@ -292,9 +293,9 @@ def create_pj_comparison(pj_df: pd.DataFrame) -> go.Figure:
                 xanchor="right",
                 x=1,
             ),
-            title=dict(text="🏢 Capaian Realisasi per Bidang Penanggung Jawab", font=dict(size=16)),
             barmode="group",
-            height=max(320, len(pj_df) * 50 + 100),
+            margin=dict(l=20, r=50, t=30, b=20),
+            height=max(300, len(pj_df) * 50 + 80),
             yaxis=dict(autorange="reversed"),
         )
     )
@@ -324,16 +325,17 @@ def create_donut_chart(composition_df: pd.DataFrame) -> go.Figure:
 
     fig.update_layout(
         **_merged_layout(
+            title="",
             legend=dict(
                 orientation="h",
-                yanchor="bottom",
-                y=-0.15,
+                yanchor="top",
+                y=-0.1,
                 xanchor="center",
                 x=0.5,
                 font=dict(size=10),
             ),
-            title=dict(text="🥧 Komposisi Realisasi per Jenis Belanja", font=dict(size=16)),
-            height=420,
+            margin=dict(l=20, r=20, t=20, b=60),
+            height=380,
             showlegend=True,
             annotations=[
                 dict(
@@ -393,10 +395,11 @@ def create_heatmap_belanja_monthly(df: pd.DataFrame) -> go.Figure:
 
     fig.update_layout(
         **_merged_layout(
-            title=dict(text="🗓️ Heatmap Realisasi per Jenis Belanja per Bulan", font=dict(size=16)),
+            title="",
             xaxis=dict(title="", side="bottom"),
             yaxis=dict(title="", autorange="reversed"),
-            height=max(300, len(pivot) * 45),
+            margin=dict(l=20, r=20, t=20, b=20),
+            height=max(280, len(pivot) * 45),
         )
     )
 
