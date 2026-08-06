@@ -14,6 +14,7 @@ from utils.data_loader import (
     read_smart_excel,
     filter_data,
     get_summary,
+    get_executive_insights,
     get_pj_comparison,
     get_monthly_trend,
     get_quarterly_trend,
@@ -823,6 +824,25 @@ elif page == "📊 Dashboard":
     target_kpi = summary.get("target_kpi", 100.0)
     latest_bln_name = NAMA_BULAN.get(summary.get("latest_bulan", 1), "")
 
+    # ── Executive Summary & Insight Card ──
+    insights = get_executive_insights(df_filtered, summary)
+    with st.expander("💡 Executive Summary & Insight Naratif Otomatis", expanded=True):
+        col_ins1, col_ins2 = st.columns([2.5, 1])
+        with col_ins1:
+            st.markdown("#### 📌 Ringkasan Eksekutif & Analisis Data")
+            for b in insights["bullets"]:
+                st.markdown(f"- {b}")
+        with col_ins2:
+            st.markdown("#### 🎯 Performa Target KPI")
+            st.metric(
+                label=f"Target KPI ({latest_bln_name})",
+                value=f"{target_kpi}%",
+                delta=f"{summary['persentase'] - target_kpi:.2f}%",
+            )
+            st.caption(f"Status: **{'🟢 Sesuai Target' if summary['persentase'] >= target_kpi else '🔴 Di Bawah Target'}**")
+
+    st.markdown("")
+
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
@@ -941,6 +961,24 @@ elif page == "📊 Dashboard":
 
     idx = df_filtered.groupby(group_cols, dropna=False)["bulan"].idxmax()
     latest_detail = df_filtered.loc[idx].copy()
+
+    # Search filter
+    col_search1, _ = st.columns([2, 1])
+    with col_search1:
+        search_query = st.text_input(
+            "🔍 Cari Sub-Kegiatan / Kode Rekening / Bidang...",
+            placeholder="Ketik nama sub-kegiatan, kode rekening, atau bidang...",
+            key="dashboard_search_input",
+        ).strip().lower()
+
+    if search_query:
+        mask = latest_detail["jenis_belanja"].astype(str).str.lower().str.contains(search_query)
+        if "kode_rekening" in latest_detail.columns:
+            mask = mask | latest_detail["kode_rekening"].astype(str).str.lower().str.contains(search_query)
+        if "penanggungjawab" in latest_detail.columns:
+            mask = mask | latest_detail["penanggungjawab"].astype(str).str.lower().str.contains(search_query)
+        latest_detail = latest_detail[mask]
+        st.caption(f"Pencarian Cepat: Menampilkan **{len(latest_detail)}** sub-kegiatan yang cocok.")
 
     real_col = "realisasi_kumulatif" if "realisasi_kumulatif" in latest_detail.columns else "realisasi"
     latest_detail["sisa"] = latest_detail["pagu_anggaran"] - latest_detail[real_col]

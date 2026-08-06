@@ -422,3 +422,78 @@ def get_belanja_composition(df: pd.DataFrame) -> pd.DataFrame:
     ) if total > 0 else 0
 
     return composition
+
+
+def get_executive_insights(df: pd.DataFrame, summary: dict) -> dict:
+    """
+    Menghasilkan narasi dan insight eksekutif otomatis dari data realisasi.
+    """
+    if df.empty:
+        return {
+            "top_sub": None,
+            "lowest_sub": None,
+            "top_pj": None,
+            "bullets": ["Belum ada data anggaran yang tersedia."],
+        }
+
+    group_cols = [c for c in ["tahun", "penanggungjawab", "kode_rekening", "jenis_belanja"] if c in df.columns]
+    if not group_cols:
+        group_cols = ["jenis_belanja"]
+
+    idx = df.groupby(group_cols, dropna=False)["bulan"].idxmax()
+    latest = df.loc[idx].copy()
+    real_col = "realisasi_kumulatif" if "realisasi_kumulatif" in latest.columns else "realisasi"
+    latest["persentase"] = (latest[real_col] / latest["pagu_anggaran"].replace(0, 1) * 100).round(2)
+
+    # Sub-kegiatan tertinggi & terendah
+    sorted_sub = latest.sort_values("persentase", ascending=False)
+    top_sub_row = sorted_sub.iloc[0] if not sorted_sub.empty else None
+    lowest_sub_row = sorted_sub.iloc[-1] if not sorted_sub.empty else None
+
+    # Bidang penanggung jawab paling produktif
+    top_pj_row = None
+    if "penanggungjawab" in latest.columns:
+        pj_agg = latest.groupby("penanggungjawab").agg(
+            pagu=("pagu_anggaran", "sum"),
+            real=(real_col, "sum"),
+        ).reset_index()
+        pj_agg["pct"] = (pj_agg["real"] / pj_agg["pagu"].replace(0, 1) * 100).round(2)
+        pj_agg = pj_agg.sort_values("pct", ascending=False)
+        if not pj_agg.empty:
+            top_pj_row = pj_agg.iloc[0]
+
+    latest_bln_name = NAMA_BULAN.get(summary.get("latest_bulan", 1), "berjalan")
+    target_kpi = summary.get("target_kpi", 100.0)
+    total_pct = summary.get("persentase", 0.0)
+
+    bullets = []
+
+    # Bullet 1: Ringkasan Capaian vs Target
+    if total_pct >= target_kpi:
+        bullets.append(f"Capaian realisasi keseluruhan s.d. bulan **{latest_bln_name}** mencapai **{total_pct:.2f}%**, telah **memenuhi target KPI** ({target_kpi}%).")
+    else:
+        diff = target_kpi - total_pct
+        bullets.append(f"Capaian realisasi keseluruhan s.d. bulan **{latest_bln_name}** mencapai **{total_pct:.2f}%**, selisih **{diff:.2f}%** di bawah target KPI ({target_kpi}%).")
+
+    # Bullet 2: Sub-kegiatan tertinggi
+    if top_sub_row is not None:
+        sub_name = top_sub_row["jenis_belanja"]
+        sub_pct = top_sub_row["persentase"]
+        bullets.append(f"Sub-kegiatan dengan capaian tertinggi saat ini adalah **{sub_name}** (**{sub_pct:.2f}%**).")
+
+    # Bullet 3: Sub-kegiatan terendah
+    if lowest_sub_row is not None and len(sorted_sub) > 1:
+        low_name = lowest_sub_row["jenis_belanja"]
+        low_pct = lowest_sub_row["persentase"]
+        bullets.append(f"Sub-kegiatan yang membutuhkan perhatian khusus/percepatan adalah **{low_name}** (**{low_pct:.2f}%**).")
+
+    # Bullet 4: Bidang terbaik
+    if top_pj_row is not None:
+        bullets.append(f"Bidang Penanggung Jawab dengan capaian tertinggi adalah **{top_pj_row['penanggungjawab']}** (**{top_pj_row['pct']:.2f}%**).")
+
+    return {
+        "top_sub": top_sub_row.to_dict() if top_sub_row is not None else None,
+        "lowest_sub": lowest_sub_row.to_dict() if lowest_sub_row is not None else None,
+        "top_pj": top_pj_row.to_dict() if top_pj_row is not None else None,
+        "bullets": bullets,
+    }
