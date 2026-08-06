@@ -42,6 +42,7 @@ from utils.data_manager import (
     get_all_jenis_belanja,
     get_all_penanggungjawab,
     is_gsheets_configured,
+    generate_formatted_excel_report,
     JENIS_BELANJA_OPTIONS,
 )
 from utils.auth import (
@@ -1036,16 +1037,21 @@ elif page == "📊 Dashboard":
 
     # ── Download ──
     st.markdown("")
-    col_dl1, col_dl2, _ = st.columns([1, 1, 3])
+    col_dl1, col_dl2, col_dl3 = st.columns([1.5, 1, 1])
 
     with col_dl1:
-        csv_data = df_filtered.to_csv(index=False).encode("utf-8")
-        st.download_button(
-            label="📥 Download Data (CSV)",
-            data=csv_data,
-            file_name=f"realisasi_bkad_{selected_tahun}.csv",
-            mime="text/csv",
-        )
+        try:
+            excel_report_bytes = generate_formatted_excel_report(df_filtered, summary, selected_tahun)
+            st.download_button(
+                label="📊 Download Laporan Resmi (Excel Terformat)",
+                data=excel_report_bytes,
+                file_name=f"laporan_realisasi_bkad_{selected_tahun}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                type="primary",
+                use_container_width=True,
+            )
+        except Exception as e:
+            st.error(f"❌ Gagal membuat Laporan Excel: {e}")
 
     with col_dl2:
         csv_summary = latest_detail.to_csv(index=False).encode("utf-8")
@@ -1054,6 +1060,17 @@ elif page == "📊 Dashboard":
             data=csv_summary,
             file_name=f"ringkasan_bkad_{selected_tahun}.csv",
             mime="text/csv",
+            use_container_width=True,
+        )
+
+    with col_dl3:
+        csv_data = df_filtered.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            label="📥 Download Data Mentah (CSV)",
+            data=csv_data,
+            file_name=f"realisasi_bkad_{selected_tahun}.csv",
+            mime="text/csv",
+            use_container_width=True,
         )
 
     st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
