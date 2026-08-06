@@ -398,11 +398,11 @@ if page == "📝 Kelola Data":
                 help="Kode rekening SIPD/SIMDA (opsional)",
             )
             st.text_input(
-                "💰 Pagu Anggaran Tahunan (Rp)",
+                "💰 Pagu Anggaran (Rp)",
                 key="pagu_raw_key",
                 on_change=_on_pagu_change,
-                help="Ketik nominal pagu anggaran untuk 1 tahun penuh (contoh: 1000000), titik pemisah ribuan akan otomatis terformat",
-                placeholder="Contoh: 1.000.000 atau 1000000",
+                help="Ketik nominal plafon pagu anggaran (contoh: 100000000), titik pemisah ribuan akan otomatis terformat",
+                placeholder="Contoh: 100.000.000 atau 100000000",
             )
             st.text_input(
                 "✅ Realisasi (Rp)",
