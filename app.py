@@ -268,6 +268,7 @@ if page == "📝 Kelola Data":
                 max_value=2030,
                 value=2025,
                 step=1,
+                format="%d",
             )
             input_jenis_select = st.selectbox(
                 "💰 Jenis Belanja",
@@ -354,20 +355,62 @@ if page == "📝 Kelola Data":
         current_data = load_raw_data(data_path)
         if not current_data.empty:
             st.caption(f"Total: **{len(current_data)}** baris data")
-            preview = current_data.tail(10).copy()
-            preview["nama_bulan"] = preview["bulan"].map(NAMA_BULAN)
-            preview["pagu_fmt"] = preview["pagu_anggaran"].apply(lambda v: f"Rp {format_rupiah_titik(v)}")
-            preview["realisasi_fmt"] = preview["realisasi"].apply(lambda v: f"Rp {format_rupiah_titik(v)}")
+
+            # Hitung Realisasi Kumulatif Terakumulasi dari bulan ke bulan
+            group_cols = [c for c in ["tahun", "penanggungjawab", "kode_rekening", "jenis_belanja"] if c in current_data.columns]
+            if not group_cols:
+                group_cols = ["tahun", "jenis_belanja"]
+
+            sort_cols = [c for c in group_cols + ["bulan"] if c in current_data.columns]
+            current_data_sorted = current_data.sort_values(sort_cols).copy()
+            current_data_sorted["realisasi_num"] = pd.to_numeric(current_data_sorted["realisasi"], errors="coerce").fillna(0)
+            current_data_sorted["realisasi_kumulatif"] = current_data_sorted.groupby(group_cols)["realisasi_num"].cumsum()
+
+            preview = current_data_sorted.tail(10).copy()
+
+            # Format tahun tanpa koma
+            preview["tahun_str"] = pd.to_numeric(preview["tahun"], errors="coerce").fillna(2025).astype(int).astype(str)
+            preview["nama_bulan"] = pd.to_numeric(preview["bulan"], errors="coerce").fillna(1).astype(int).map(NAMA_BULAN)
+
+            if "penanggungjawab" in preview.columns:
+                preview["pj_str"] = preview["penanggungjawab"].fillna("-").astype(str)
+            else:
+                preview["pj_str"] = "-"
+
+            if "kode_rekening" in preview.columns:
+                preview["kode_str"] = preview["kode_rekening"].fillna("-").astype(str).str.replace(r'\.0$', '', regex=True)
+            else:
+                preview["kode_str"] = "-"
+
+            pagu_num = pd.to_numeric(preview["pagu_anggaran"], errors="coerce").fillna(0)
+            real_num = preview["realisasi_kumulatif"]
+            sisa_num = pagu_num - real_num
+            capaian_pct = (real_num / pagu_num.replace(0, 1) * 100).round(2)
+
+            preview["pagu_fmt"] = pagu_num.apply(lambda v: f"Rp {format_rupiah_titik(v)}")
+            preview["realisasi_fmt"] = real_num.apply(lambda v: f"Rp {format_rupiah_titik(v)}")
+            preview["sisa_fmt"] = sisa_num.apply(lambda v: f"Rp {format_rupiah_titik(v)}")
+            preview["capaian_fmt"] = capaian_pct.apply(lambda v: f"{v:.2f}%")
+
+            cols_preview = ["tahun_str", "pj_str", "kode_str", "jenis_belanja", "nama_bulan", "pagu_fmt", "realisasi_fmt", "sisa_fmt", "capaian_fmt"]
             st.dataframe(
-                preview[["tahun", "jenis_belanja", "nama_bulan", "pagu_fmt", "realisasi_fmt"]].rename(columns={
-                    "tahun": "Tahun",
+                preview[cols_preview].rename(columns={
+                    "tahun_str": "Tahun",
+                    "pj_str": "Penanggung Jawab",
+                    "kode_str": "Kode Rekening",
                     "jenis_belanja": "Jenis Belanja",
                     "nama_bulan": "Bulan",
                     "pagu_fmt": "Pagu Anggaran",
-                    "realisasi_fmt": "Realisasi",
+                    "realisasi_fmt": "Realisasi Kumulatif",
+                    "sisa_fmt": "Sisa Anggaran",
+                    "capaian_fmt": "% Capaian",
                 }),
                 use_container_width=True,
                 hide_index=True,
+                column_config={
+                    "Tahun": st.column_config.TextColumn("Tahun"),
+                    "% Capaian": st.column_config.TextColumn("% Capaian"),
+                }
             )
         else:
             st.info("📭 Belum ada data. Tambahkan data melalui form di atas.")
@@ -524,37 +567,64 @@ if page == "📝 Kelola Data":
             if filtered_del.empty:
                 st.warning("⚠️ Tidak ada data sesuai filter.")
             else:
-                # Tampilkan data dengan checkbox
-                display_del = filtered_del.copy()
-                if "tahun" in display_del.columns:
-                    display_del["tahun"] = pd.to_numeric(display_del["tahun"], errors="coerce").fillna(2024).astype(int)
+                # Tampilkan data dengan checkbox/editor
+                group_cols_del = [c for c in ["tahun", "penanggungjawab", "kode_rekening", "jenis_belanja"] if c in filtered_del.columns]
+                if not group_cols_del:
+                    group_cols_del = ["tahun", "jenis_belanja"]
+
+                sort_cols_del = [c for c in group_cols_del + ["bulan"] if c in filtered_del.columns]
+                filtered_del_sorted = filtered_del.sort_values(sort_cols_del).copy()
+                filtered_del_sorted["realisasi_num"] = pd.to_numeric(filtered_del_sorted["realisasi"], errors="coerce").fillna(0)
+                filtered_del_sorted["realisasi_kumulatif"] = filtered_del_sorted.groupby(group_cols_del)["realisasi_num"].cumsum()
+
+                display_del = filtered_del_sorted.copy()
+                display_del["tahun_str"] = pd.to_numeric(display_del["tahun"], errors="coerce").fillna(2025).astype(int).astype(str)
+
                 if "bulan" in display_del.columns:
-                    display_del["bulan"] = pd.to_numeric(display_del["bulan"], errors="coerce").fillna(1).astype(int)
-                    display_del["nama_bulan"] = display_del["bulan"].map(NAMA_BULAN)
+                    display_del["bulan_num"] = pd.to_numeric(display_del["bulan"], errors="coerce").fillna(1).astype(int)
+                    display_del["nama_bulan"] = display_del["bulan_num"].map(NAMA_BULAN)
                 else:
                     display_del["nama_bulan"] = "-"
-                if "pagu_anggaran" in display_del.columns:
-                    display_del["pagu_fmt"] = display_del["pagu_anggaran"].apply(lambda v: f"Rp {format_rupiah_titik(v)}")
-                else:
-                    display_del["pagu_fmt"] = "-"
-                if "realisasi" in display_del.columns:
-                    display_del["realisasi_fmt"] = display_del["realisasi"].apply(lambda v: f"Rp {format_rupiah_titik(v)}")
-                else:
-                    display_del["realisasi_fmt"] = "-"
 
+                if "penanggungjawab" in display_del.columns:
+                    display_del["pj_str"] = display_del["penanggungjawab"].fillna("-").astype(str)
+                else:
+                    display_del["pj_str"] = "-"
+
+                if "kode_rekening" in display_del.columns:
+                    display_del["kode_str"] = display_del["kode_rekening"].fillna("-").astype(str).str.replace(r'\.0$', '', regex=True)
+                else:
+                    display_del["kode_str"] = "-"
+
+                pagu_num = pd.to_numeric(display_del["pagu_anggaran"], errors="coerce").fillna(0) if "pagu_anggaran" in display_del.columns else pd.Series(0, index=display_del.index)
+                real_num = display_del["realisasi_kumulatif"]
+                sisa_num = pagu_num - real_num
+                capaian_pct = (real_num / pagu_num.replace(0, 1) * 100).round(2)
+
+                display_del["pagu_fmt"] = pagu_num.apply(lambda v: f"Rp {format_rupiah_titik(v)}")
+                display_del["realisasi_fmt"] = real_num.apply(lambda v: f"Rp {format_rupiah_titik(v)}")
+                display_del["sisa_fmt"] = sisa_num.apply(lambda v: f"Rp {format_rupiah_titik(v)}")
+                display_del["capaian_fmt"] = capaian_pct.apply(lambda v: f"{v:.2f}%")
+
+                cols_del = ["tahun_str", "pj_str", "kode_str", "jenis_belanja", "nama_bulan", "pagu_fmt", "realisasi_fmt", "sisa_fmt", "capaian_fmt"]
+                cols_rename = {
+                    "tahun_str": "Tahun",
+                    "pj_str": "Penanggung Jawab",
+                    "kode_str": "Kode Rekening",
+                    "jenis_belanja": "Jenis Belanja",
+                    "nama_bulan": "Bulan",
+                    "pagu_fmt": "Pagu Anggaran",
+                    "realisasi_fmt": "Realisasi Kumulatif",
+                    "sisa_fmt": "Sisa Anggaran",
+                    "capaian_fmt": "% Capaian",
+                }
                 selected_del = st.data_editor(
-                    display_del[["tahun", "jenis_belanja", "nama_bulan", "pagu_fmt", "realisasi_fmt"]].rename(columns={
-                        "tahun": "Tahun",
-                        "jenis_belanja": "Jenis Belanja",
-                        "nama_bulan": "Bulan",
-                        "pagu_fmt": "Pagu Anggaran",
-                        "realisasi_fmt": "Realisasi",
-                    }),
+                    display_del[cols_del].rename(columns=cols_rename),
                     use_container_width=True,
                     hide_index=False,
                     num_rows="fixed",
                     key="delete_selector",
-                    disabled=["Tahun", "Jenis Belanja", "Bulan", "Pagu Anggaran", "Realisasi"],
+                    disabled=list(cols_rename.values()),
                 )
 
                 st.markdown("")
@@ -645,8 +715,17 @@ if page == "📝 Kelola Data":
                 preview_df = read_smart_excel(upload_file)
                 preview_df.columns = preview_df.columns.str.strip().str.lower().str.replace(" ", "_")
 
+                display_upload = preview_df.head(20).copy()
+                if "tahun" in display_upload.columns:
+                    display_upload["tahun"] = pd.to_numeric(display_upload["tahun"], errors="coerce").fillna(2025).astype(int).astype(str)
+
                 st.markdown("### Preview Data")
-                st.dataframe(preview_df.head(20), use_container_width=True, hide_index=True)
+                st.dataframe(
+                    display_upload,
+                    use_container_width=True,
+                    hide_index=True,
+                    column_config={"tahun": st.column_config.TextColumn("tahun")},
+                )
                 st.caption(f"Total baris: **{len(preview_df)}**")
 
                 required = ["tahun", "nama_opd", "jenis_belanja", "bulan", "pagu_anggaran", "realisasi"]
@@ -875,16 +954,18 @@ elif page == "📊 Dashboard":
 
     idx = df_filtered.groupby(group_cols)["bulan"].idxmax()
     latest_detail = df_filtered.loc[idx].copy()
-    latest_detail["sisa"] = latest_detail["pagu_anggaran"] - latest_detail["realisasi"]
+
+    real_col = "realisasi_kumulatif" if "realisasi_kumulatif" in latest_detail.columns else "realisasi"
+    latest_detail["sisa"] = latest_detail["pagu_anggaran"] - latest_detail[real_col]
     latest_detail["persentase"] = (
-        (latest_detail["realisasi"] / latest_detail["pagu_anggaran"] * 100)
+        (latest_detail[real_col] / latest_detail["pagu_anggaran"] * 100)
         .round(2)
         .fillna(0)
     )
     latest_detail = latest_detail.sort_values("pagu_anggaran", ascending=False)
 
     latest_detail["pagu_fmt"] = latest_detail["pagu_anggaran"].apply(format_rupiah)
-    latest_detail["realisasi_fmt"] = latest_detail["realisasi"].apply(format_rupiah)
+    latest_detail["realisasi_fmt"] = latest_detail[real_col].apply(format_rupiah)
     latest_detail["sisa_fmt"] = latest_detail["sisa"].apply(format_rupiah)
     latest_detail["persentase_fmt"] = latest_detail["persentase"].apply(lambda x: f"{x:.2f}%")
 
