@@ -233,9 +233,25 @@ def add_record(
     filepath: Optional[str] = None,
 ) -> pd.DataFrame:
     """
-    Menambah satu baris data baru.
+    Menambah satu baris data baru dengan validasi duplikasi.
     """
     df = load_raw_data(filepath)
+
+    if not df.empty and "jenis_belanja" in df.columns:
+        mask = (
+            (pd.to_numeric(df["tahun"], errors="coerce") == tahun) &
+            (pd.to_numeric(df["bulan"], errors="coerce") == bulan) &
+            (df["jenis_belanja"].astype(str).str.strip().str.lower() == jenis_belanja.strip().lower())
+        )
+        if "kode_rekening" in df.columns and kode_rekening.strip():
+            mask = mask & (df["kode_rekening"].astype(str).str.strip() == kode_rekening.strip())
+
+        if mask.any():
+            nama_bln = NAMA_BULAN.get(bulan, str(bulan))
+            raise ValueError(
+                f"Data realisasi untuk '{jenis_belanja}' pada bulan {nama_bln} {tahun} sudah pernah diinput. "
+                f"Silakan gunakan menu '✏️ Edit Data' jika ingin memperbarui nilainya."
+            )
 
     new_row = pd.DataFrame([{
         "tahun": tahun,

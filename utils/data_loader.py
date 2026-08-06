@@ -171,11 +171,35 @@ def filter_data(
     return filtered
 
 
+TARGET_TRIWULAN = {
+    1: 15.0,  # TW I (Jan-Mar)
+    2: 40.0,  # TW II (Apr-Jun)
+    3: 75.0,  # TW III (Jul-Sep)
+    4: 100.0, # TW IV (Okt-Des)
+}
+
+TARGET_BULANAN = {
+    1: 5.0,
+    2: 10.0,
+    3: 15.0,
+    4: 23.0,
+    5: 31.0,
+    6: 40.0,
+    7: 51.0,
+    8: 63.0,
+    9: 75.0,
+    10: 83.0,
+    11: 91.0,
+    12: 100.0,
+}
+
+
 def get_summary(df: pd.DataFrame) -> dict:
     """
     Menghitung ringkasan data:
     - Total Pagu Tahunan: Pagu tetap (diambil 1x per item unik per tahun, tidak terakumulasi antar bulan).
     - Total Realisasi: Realisasi kumulatif terakumulasi s.d. bulan terakhir.
+    - Evaluasi Target KPI.
     """
     if df.empty:
         return {
@@ -183,6 +207,9 @@ def get_summary(df: pd.DataFrame) -> dict:
             "total_realisasi": 0.0,
             "total_sisa": 0.0,
             "persentase": 0.0,
+            "latest_bulan": 1,
+            "target_kpi": 5.0,
+            "underperforming_count": 0,
         }
 
     item_cols = [c for c in ["tahun", "penanggungjawab", "kode_rekening", "jenis_belanja"] if c in df.columns]
@@ -190,13 +217,20 @@ def get_summary(df: pd.DataFrame) -> dict:
         item_cols = ["jenis_belanja"]
 
     # Total Pagu Tahunan (TETAP: 1x per item unik)
-    total_pagu = df.groupby(item_cols)["pagu_anggaran"].first().sum()
+    total_pagu = df.groupby(item_cols, dropna=False)["pagu_anggaran"].first().sum()
 
     # Total Realisasi (Terakumulasi s.d. bulan terakhir per item)
-    idx = df.groupby(item_cols)["bulan"].idxmax()
-    latest = df.loc[idx]
+    idx = df.groupby(item_cols, dropna=False)["bulan"].idxmax()
+    latest = df.loc[idx].copy()
     real_col = "realisasi_kumulatif" if "realisasi_kumulatif" in latest.columns else "realisasi"
     total_realisasi = latest[real_col].sum()
+
+    latest_bulan = int(latest["bulan"].max()) if not latest.empty and "bulan" in latest.columns else 1
+    target_kpi = TARGET_BULANAN.get(latest_bulan, 100.0)
+
+    # Hitung jumlah sub-kegiatan yang di bawah target KPI
+    latest["item_pct"] = (latest[real_col] / latest["pagu_anggaran"].replace(0, 1) * 100).round(2)
+    underperforming = latest[latest["item_pct"] < target_kpi]
 
     total_sisa = max(0.0, total_pagu - total_realisasi)
     persentase = (total_realisasi / total_pagu * 100) if total_pagu > 0 else 0.0
@@ -206,6 +240,9 @@ def get_summary(df: pd.DataFrame) -> dict:
         "total_realisasi": total_realisasi,
         "total_sisa": total_sisa,
         "persentase": round(persentase, 2),
+        "latest_bulan": latest_bulan,
+        "target_kpi": target_kpi,
+        "underperforming_count": len(underperforming),
     }
 
 

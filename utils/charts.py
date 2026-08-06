@@ -81,14 +81,13 @@ def _merged_layout(**overrides) -> dict:
     return merged
 
 
-def create_gauge_chart(percentage: float, title: str = "Capaian Realisasi") -> go.Figure:
+def create_gauge_chart(percentage: float, target_percentage: float = 100.0, title: str = "Capaian Realisasi") -> go.Figure:
     """
-    Membuat gauge chart persentase capaian realisasi.
+    Membuat gauge chart persentase capaian realisasi dengan garis batas target KPI.
     """
-    # Warna berdasarkan persentase
-    if percentage >= 80:
+    if percentage >= target_percentage:
         bar_color = COLORS["primary"]
-    elif percentage >= 50:
+    elif percentage >= max(0.0, target_percentage - 10.0):
         bar_color = COLORS["warning"]
     else:
         bar_color = COLORS["accent"]
@@ -96,6 +95,14 @@ def create_gauge_chart(percentage: float, title: str = "Capaian Realisasi") -> g
     fig = go.Figure(go.Indicator(
         mode="gauge+number+delta",
         value=percentage,
+        delta=dict(
+            reference=target_percentage,
+            position="bottom",
+            increasing=dict(color=COLORS["primary"]),
+            decreasing=dict(color=COLORS["accent"]),
+            valueformat=".2f",
+            suffix="%",
+        ),
         number=dict(suffix="%", font=dict(size=42, color=COLORS["text"])),
         title=dict(text=title, font=dict(size=16, color=COLORS["text_muted"])),
         gauge=dict(
@@ -108,15 +115,10 @@ def create_gauge_chart(percentage: float, title: str = "Capaian Realisasi") -> g
             bar=dict(color=bar_color, thickness=0.75),
             bgcolor="rgba(255,255,255,0.05)",
             borderwidth=0,
-            steps=[
-                dict(range=[0, 50], color="rgba(231,76,60,0.15)"),
-                dict(range=[50, 80], color="rgba(243,156,18,0.15)"),
-                dict(range=[80, 100], color="rgba(46,204,113,0.15)"),
-            ],
             threshold=dict(
-                line=dict(color=COLORS["text"], width=2),
+                line=dict(color="#F1C40F", width=3),
                 thickness=0.8,
-                value=percentage,
+                value=target_percentage,
             ),
         ),
     ))
