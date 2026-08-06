@@ -39,6 +39,17 @@ def _process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     # Normalisasi nama kolom: lowercase, strip spasi
     df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
 
+    if "pagu_anggaran" not in df.columns:
+        if "pagu_tahunan" in df.columns:
+            df["pagu_anggaran"] = df["pagu_tahunan"]
+        elif "pagu" in df.columns:
+            df["pagu_anggaran"] = df["pagu"]
+        else:
+            df["pagu_anggaran"] = 0.0
+
+    if "realisasi" not in df.columns:
+        df["realisasi"] = 0.0
+
     # Validasi kolom
     missing = [col for col in REQUIRED_COLUMNS if col not in df.columns]
     if missing:

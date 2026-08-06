@@ -471,8 +471,17 @@ if page == "📝 Kelola Data":
             else:
                 preview["kode_str"] = "-"
 
-            pagu_num = pd.to_numeric(preview["pagu_anggaran"], errors="coerce").fillna(0)
-            real_num = pd.to_numeric(preview["realisasi"], errors="coerce").fillna(0)
+            pagu_col = "pagu_anggaran" if "pagu_anggaran" in preview.columns else ("pagu_tahunan" if "pagu_tahunan" in preview.columns else ("pagu" if "pagu" in preview.columns else None))
+            if pagu_col:
+                pagu_num = pd.to_numeric(preview[pagu_col], errors="coerce").fillna(0)
+            else:
+                pagu_num = pd.Series(0, index=preview.index)
+
+            if "realisasi" in preview.columns:
+                real_num = pd.to_numeric(preview["realisasi"], errors="coerce").fillna(0)
+            else:
+                real_num = pd.Series(0, index=preview.index)
+
             sisa_num = pagu_num - real_num
             capaian_pct = (real_num / pagu_num.replace(0, 1) * 100).round(2)
 

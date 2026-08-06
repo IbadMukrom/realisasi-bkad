@@ -186,6 +186,18 @@ def load_raw_data(filepath: Optional[str] = None) -> pd.DataFrame:
             df = pd.DataFrame(columns=default_cols)
 
     df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+
+    if "pagu_anggaran" not in df.columns:
+        if "pagu_tahunan" in df.columns:
+            df["pagu_anggaran"] = df["pagu_tahunan"]
+        elif "pagu" in df.columns:
+            df["pagu_anggaran"] = df["pagu"]
+        else:
+            df["pagu_anggaran"] = 0.0
+
+    if "realisasi" not in df.columns:
+        df["realisasi"] = 0.0
+
     return df
 
 
