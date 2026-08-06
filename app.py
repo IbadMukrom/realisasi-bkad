@@ -38,6 +38,7 @@ from utils.data_manager import (
     add_record,
     delete_records,
     bulk_save,
+    merge_save_records,
     get_data_path,
     get_all_jenis_belanja,
     get_all_penanggungjawab,
@@ -756,6 +757,16 @@ if page == "📝 Kelola Data":
                 )
             st.markdown("")
 
+        upload_mode = st.radio(
+            "Pilih Mode Upload Data:",
+            options=[
+                "🔄 Perbarui & Tambah Data (Merge/Upsert - Memperbarui data yang ada dan menambah data baru)",
+                "💥 Ganti Seluruh Data (Replace All - Menghapus seluruh database lama)",
+            ],
+            index=0,
+            help="Mode 1: Memperbarui data yang cocok & menambahkan data baru tanpa menghapus data lama.\nMode 2: Menghapus seluruh isi database lama secara permanen.",
+        )
+
         upload_file = st.file_uploader(
             "Pilih file Excel",
             type=["xlsx", "xls"],
@@ -787,9 +798,19 @@ if page == "📝 Kelola Data":
                     st.error(f"❌ Kolom tidak lengkap. Kolom yang hilang: {', '.join(missing)}")
                 else:
                     st.success("✅ Format file valid!")
-                    if st.button("💾 Ganti Data dengan File Ini", type="primary", use_container_width=True):
-                        bulk_save(preview_df, data_path)
-                        st.success("✅ Data berhasil diganti!")
+                    if "🔄" in upload_mode:
+                        btn_label = "💾 Perbarui & Tambahkan Data Baru"
+                    else:
+                        btn_label = "💥 Ganti Seluruh Data dengan File Ini"
+
+                    if st.button(btn_label, type="primary", use_container_width=True):
+                        if "🔄" in upload_mode:
+                            n_rows = merge_save_records(preview_df, data_path)
+                            st.success(f"✅ Berhasil memperbarui & menggabungkan {n_rows} baris data!")
+                        else:
+                            bulk_save(preview_df, data_path)
+                            st.success("✅ Seluruh data lama berhasil diganti!")
+
                         st.cache_data.clear()
                         st.rerun()
             except Exception as e:

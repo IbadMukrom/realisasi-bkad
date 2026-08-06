@@ -319,6 +319,37 @@ def bulk_save(df: pd.DataFrame, filepath: Optional[str] = None) -> None:
     save_data(df, path)
 
 
+def merge_save_records(new_df: pd.DataFrame, filepath: Optional[str] = None) -> int:
+    """
+    Menggabungkan (upsert) data Excel baru ke dalam database:
+    - Jika kunci (tahun + bulan + jenis_belanja + kode_rekening) sudah ada, perbarui nilainya.
+    - Jika belum ada, tambahkan sebagai baris baru.
+    """
+    path = filepath or DEFAULT_FILE
+    existing_df = load_raw_data(path)
+
+    if "nama_opd" not in new_df.columns:
+        new_df["nama_opd"] = NAMA_OPD
+    else:
+        new_df["nama_opd"] = new_df["nama_opd"].fillna(NAMA_OPD)
+
+    if existing_df.empty:
+        bulk_save(new_df, path)
+        return len(new_df)
+
+    key_cols = ["tahun", "bulan", "jenis_belanja"]
+    if "kode_rekening" in existing_df.columns and "kode_rekening" in new_df.columns:
+        key_cols.append("kode_rekening")
+
+    # new_df ditaruh di depan agar keep='first' mengambil nilai dari Excel baru
+    combined = pd.concat([new_df, existing_df], ignore_index=True)
+    combined = combined.drop_duplicates(subset=key_cols, keep="first")
+    combined = combined.sort_values(["tahun", "jenis_belanja", "bulan"]).reset_index(drop=True)
+
+    save_data(combined, path)
+    return len(new_df)
+
+
 def generate_formatted_excel_report(df_filtered: pd.DataFrame, summary: dict, tahun: int) -> bytes:
     """
     Menghasilkan file Excel terformat resmi laporan realisasi anggaran BKAD.
