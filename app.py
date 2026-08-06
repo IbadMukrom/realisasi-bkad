@@ -452,10 +452,11 @@ if page == "📝 Kelola Data":
 
         # Preview data terbaru
         st.markdown('<div class="section-header">📋 Data Terkini</div>', unsafe_allow_html=True)
-        current_data = load_raw_data(data_path)
-        if not current_data.empty:
-            st.caption(f"Total: **{len(current_data)}** baris data")
-            preview = current_data.tail(10).copy()
+        raw_data = load_raw_data(data_path)
+        if not raw_data.empty:
+            st.caption(f"Total: **{len(raw_data)}** baris data")
+            processed_df = _process_dataframe(raw_data)
+            preview = processed_df.tail(10).copy()
 
             # Format tahun tanpa koma
             preview["tahun_str"] = pd.to_numeric(preview["tahun"], errors="coerce").fillna(2025).astype(int).astype(str)
@@ -471,26 +472,19 @@ if page == "📝 Kelola Data":
             else:
                 preview["kode_str"] = "-"
 
-            pagu_col = "pagu_anggaran" if "pagu_anggaran" in preview.columns else ("pagu_tahunan" if "pagu_tahunan" in preview.columns else ("pagu" if "pagu" in preview.columns else None))
-            if pagu_col:
-                pagu_num = pd.to_numeric(preview[pagu_col], errors="coerce").fillna(0)
-            else:
-                pagu_num = pd.Series(0, index=preview.index)
-
-            if "realisasi" in preview.columns:
-                real_num = pd.to_numeric(preview["realisasi"], errors="coerce").fillna(0)
-            else:
-                real_num = pd.Series(0, index=preview.index)
-
-            sisa_num = pagu_num - real_num
-            capaian_pct = (real_num / pagu_num.replace(0, 1) * 100).round(2)
+            pagu_num = pd.to_numeric(preview.get("pagu_anggaran", 0), errors="coerce").fillna(0)
+            real_bln_num = pd.to_numeric(preview.get("realisasi", 0), errors="coerce").fillna(0)
+            real_kum_num = pd.to_numeric(preview.get("realisasi_kumulatif", real_bln_num), errors="coerce").fillna(0)
+            sisa_num = pagu_num - real_kum_num
+            capaian_pct = (real_kum_num / pagu_num.replace(0, 1) * 100).round(2)
 
             preview["pagu_fmt"] = pagu_num.apply(lambda v: f"Rp {format_rupiah_titik(v)}")
-            preview["realisasi_fmt"] = real_num.apply(lambda v: f"Rp {format_rupiah_titik(v)}")
+            preview["real_bln_fmt"] = real_bln_num.apply(lambda v: f"Rp {format_rupiah_titik(v)}")
+            preview["real_kum_fmt"] = real_kum_num.apply(lambda v: f"Rp {format_rupiah_titik(v)}")
             preview["sisa_fmt"] = sisa_num.apply(lambda v: f"Rp {format_rupiah_titik(v)}")
             preview["capaian_fmt"] = capaian_pct.apply(lambda v: f"{v:.2f}%")
 
-            cols_preview = ["tahun_str", "pj_str", "kode_str", "jenis_belanja", "nama_bulan", "pagu_fmt", "realisasi_fmt", "sisa_fmt", "capaian_fmt"]
+            cols_preview = ["tahun_str", "pj_str", "kode_str", "jenis_belanja", "nama_bulan", "pagu_fmt", "real_bln_fmt", "real_kum_fmt", "sisa_fmt", "capaian_fmt"]
             st.dataframe(
                 preview[cols_preview].rename(columns={
                     "tahun_str": "Tahun",
@@ -499,7 +493,8 @@ if page == "📝 Kelola Data":
                     "jenis_belanja": "Jenis Belanja",
                     "nama_bulan": "Bulan",
                     "pagu_fmt": "Pagu Anggaran",
-                    "realisasi_fmt": "Realisasi",
+                    "real_bln_fmt": "Realisasi Bulan Ini",
+                    "real_kum_fmt": "Realisasi Kumulatif",
                     "sisa_fmt": "Sisa Anggaran",
                     "capaian_fmt": "% Capaian",
                 }),
