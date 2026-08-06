@@ -355,18 +355,7 @@ if page == "📝 Kelola Data":
         current_data = load_raw_data(data_path)
         if not current_data.empty:
             st.caption(f"Total: **{len(current_data)}** baris data")
-
-            # Hitung Realisasi Kumulatif Terakumulasi dari bulan ke bulan
-            group_cols = [c for c in ["tahun", "penanggungjawab", "kode_rekening", "jenis_belanja"] if c in current_data.columns]
-            if not group_cols:
-                group_cols = ["tahun", "jenis_belanja"]
-
-            sort_cols = [c for c in group_cols + ["bulan"] if c in current_data.columns]
-            current_data_sorted = current_data.sort_values(sort_cols).copy()
-            current_data_sorted["realisasi_num"] = pd.to_numeric(current_data_sorted["realisasi"], errors="coerce").fillna(0)
-            current_data_sorted["realisasi_kumulatif"] = current_data_sorted.groupby(group_cols)["realisasi_num"].cumsum()
-
-            preview = current_data_sorted.tail(10).copy()
+            preview = current_data.tail(10).copy()
 
             # Format tahun tanpa koma
             preview["tahun_str"] = pd.to_numeric(preview["tahun"], errors="coerce").fillna(2025).astype(int).astype(str)
@@ -383,7 +372,7 @@ if page == "📝 Kelola Data":
                 preview["kode_str"] = "-"
 
             pagu_num = pd.to_numeric(preview["pagu_anggaran"], errors="coerce").fillna(0)
-            real_num = preview["realisasi_kumulatif"]
+            real_num = pd.to_numeric(preview["realisasi"], errors="coerce").fillna(0)
             sisa_num = pagu_num - real_num
             capaian_pct = (real_num / pagu_num.replace(0, 1) * 100).round(2)
 
@@ -401,7 +390,7 @@ if page == "📝 Kelola Data":
                     "jenis_belanja": "Jenis Belanja",
                     "nama_bulan": "Bulan",
                     "pagu_fmt": "Pagu Anggaran",
-                    "realisasi_fmt": "Realisasi Kumulatif",
+                    "realisasi_fmt": "Realisasi",
                     "sisa_fmt": "Sisa Anggaran",
                     "capaian_fmt": "% Capaian",
                 }),
@@ -568,16 +557,7 @@ if page == "📝 Kelola Data":
                 st.warning("⚠️ Tidak ada data sesuai filter.")
             else:
                 # Tampilkan data dengan checkbox/editor
-                group_cols_del = [c for c in ["tahun", "penanggungjawab", "kode_rekening", "jenis_belanja"] if c in filtered_del.columns]
-                if not group_cols_del:
-                    group_cols_del = ["tahun", "jenis_belanja"]
-
-                sort_cols_del = [c for c in group_cols_del + ["bulan"] if c in filtered_del.columns]
-                filtered_del_sorted = filtered_del.sort_values(sort_cols_del).copy()
-                filtered_del_sorted["realisasi_num"] = pd.to_numeric(filtered_del_sorted["realisasi"], errors="coerce").fillna(0)
-                filtered_del_sorted["realisasi_kumulatif"] = filtered_del_sorted.groupby(group_cols_del)["realisasi_num"].cumsum()
-
-                display_del = filtered_del_sorted.copy()
+                display_del = filtered_del.copy()
                 display_del["tahun_str"] = pd.to_numeric(display_del["tahun"], errors="coerce").fillna(2025).astype(int).astype(str)
 
                 if "bulan" in display_del.columns:
@@ -597,7 +577,7 @@ if page == "📝 Kelola Data":
                     display_del["kode_str"] = "-"
 
                 pagu_num = pd.to_numeric(display_del["pagu_anggaran"], errors="coerce").fillna(0) if "pagu_anggaran" in display_del.columns else pd.Series(0, index=display_del.index)
-                real_num = display_del["realisasi_kumulatif"]
+                real_num = pd.to_numeric(display_del["realisasi"], errors="coerce").fillna(0) if "realisasi" in display_del.columns else pd.Series(0, index=display_del.index)
                 sisa_num = pagu_num - real_num
                 capaian_pct = (real_num / pagu_num.replace(0, 1) * 100).round(2)
 
@@ -614,7 +594,7 @@ if page == "📝 Kelola Data":
                     "jenis_belanja": "Jenis Belanja",
                     "nama_bulan": "Bulan",
                     "pagu_fmt": "Pagu Anggaran",
-                    "realisasi_fmt": "Realisasi Kumulatif",
+                    "realisasi_fmt": "Realisasi",
                     "sisa_fmt": "Sisa Anggaran",
                     "capaian_fmt": "% Capaian",
                 }
