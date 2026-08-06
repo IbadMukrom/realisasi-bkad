@@ -53,6 +53,31 @@ from utils.auth import (
 )
 
 
+# ─── Helper Functions ─────────────────────────────────────────────────────────
+
+def safe_sorted_options(series) -> list:
+    """Mengembalikan list string unik yang terurut secara aman dari Series (bebas dari error NaN/None/mixed types)."""
+    if series is None or len(series) == 0:
+        return []
+    cleaned = [str(x).strip() for x in pd.Series(series).dropna().unique() if pd.notna(x) and str(x).strip() != "" and str(x).lower() != "nan"]
+    return sorted(list(set(cleaned)))
+
+
+def safe_sorted_years(series) -> list:
+    """Mengembalikan list integer tahun yang terurut secara aman dari Series."""
+    if series is None or len(series) == 0:
+        return [2025]
+    years = []
+    for x in pd.Series(series).dropna().unique():
+        if pd.notna(x):
+            try:
+                val = int(float(x))
+                years.append(val)
+            except (ValueError, TypeError):
+                pass
+    return sorted(list(set(years))) if years else [2025]
+
+
 # ─── Page Config ─────────────────────────────────────────────────────────────
 
 st.set_page_config(
@@ -494,22 +519,22 @@ if page == "📝 Kelola Data":
             with col_f1:
                 edit_tahun = st.selectbox(
                     "Filter Tahun",
-                    options=["Semua"] + sorted(edit_data["tahun"].unique().tolist()),
+                    options=["Semua"] + safe_sorted_years(edit_data["tahun"]),
                     key="edit_filter_tahun",
                 )
             with col_f2:
                 edit_jenis = st.selectbox(
                     "Filter Jenis Belanja",
-                    options=["Semua"] + sorted(edit_data["jenis_belanja"].unique().tolist()),
+                    options=["Semua"] + safe_sorted_options(edit_data["jenis_belanja"]),
                     key="edit_filter_jenis",
                 )
 
             # Apply filter
             filtered_edit = edit_data.copy()
             if edit_tahun != "Semua":
-                filtered_edit = filtered_edit[filtered_edit["tahun"] == edit_tahun]
+                filtered_edit = filtered_edit[pd.to_numeric(filtered_edit["tahun"], errors="coerce") == edit_tahun]
             if edit_jenis != "Semua":
-                filtered_edit = filtered_edit[filtered_edit["jenis_belanja"] == edit_jenis]
+                filtered_edit = filtered_edit[filtered_edit["jenis_belanja"].astype(str).str.strip() == edit_jenis]
 
             if filtered_edit.empty:
                 st.warning("⚠️ Tidak ada data sesuai filter.")
@@ -610,21 +635,21 @@ if page == "📝 Kelola Data":
             with col_d1:
                 del_tahun = st.selectbox(
                     "Filter Tahun",
-                    options=["Semua"] + sorted(del_data["tahun"].unique().tolist()),
+                    options=["Semua"] + safe_sorted_years(del_data["tahun"]),
                     key="del_filter_tahun",
                 )
             with col_d2:
                 del_jenis = st.selectbox(
                     "Filter Jenis Belanja",
-                    options=["Semua"] + sorted(del_data["jenis_belanja"].unique().tolist()),
+                    options=["Semua"] + safe_sorted_options(del_data["jenis_belanja"]),
                     key="del_filter_jenis",
                 )
 
             filtered_del = del_data.copy()
             if del_tahun != "Semua":
-                filtered_del = filtered_del[filtered_del["tahun"] == del_tahun]
+                filtered_del = filtered_del[pd.to_numeric(filtered_del["tahun"], errors="coerce") == del_tahun]
             if del_jenis != "Semua":
-                filtered_del = filtered_del[filtered_del["jenis_belanja"] == del_jenis]
+                filtered_del = filtered_del[filtered_del["jenis_belanja"].astype(str).str.strip() == del_jenis]
 
             if filtered_del.empty:
                 st.warning("⚠️ Tidak ada data sesuai filter.")
@@ -846,14 +871,14 @@ elif page == "📊 Dashboard":
 
         st.markdown("## 🔍 Filter")
 
-        tahun_options = sorted(df["tahun"].unique())
+        tahun_options = safe_sorted_years(df["tahun"])
         selected_tahun = st.selectbox(
             "📅 Tahun Anggaran",
             options=tahun_options,
             index=len(tahun_options) - 1,
         )
 
-        pj_options = sorted(df["penanggungjawab"].unique()) if "penanggungjawab" in df.columns else []
+        pj_options = safe_sorted_options(df["penanggungjawab"]) if "penanggungjawab" in df.columns else []
         selected_pj = st.multiselect(
             "🏢 Bidang Penanggung Jawab",
             options=pj_options,
@@ -861,7 +886,7 @@ elif page == "📊 Dashboard":
             placeholder="Semua Bidang",
         ) if pj_options else []
 
-        belanja_options = sorted(df["jenis_belanja"].unique())
+        belanja_options = safe_sorted_options(df["jenis_belanja"])
         selected_belanja = st.multiselect(
             "💰 Sub-Kegiatan / Jenis Belanja",
             options=belanja_options,
