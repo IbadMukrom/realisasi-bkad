@@ -39,6 +39,7 @@ from utils.data_manager import (
     delete_records,
     bulk_save,
     merge_save_records,
+    validate_and_sanitize_excel,
     get_data_path,
     get_all_jenis_belanja,
     get_all_penanggungjawab,
@@ -800,21 +801,24 @@ if page == "📝 Kelola Data":
 
         if upload_file is not None:
             try:
-                preview_df = read_smart_excel(upload_file)
-                preview_df.columns = preview_df.columns.str.strip().str.lower().str.replace(" ", "_")
+                raw_df = read_smart_excel(upload_file)
+                preview_df, upload_warnings = validate_and_sanitize_excel(raw_df)
+
+                for w in upload_warnings:
+                    st.warning(f"⚠️ {w}")
 
                 display_upload = preview_df.head(20).copy()
                 if "tahun" in display_upload.columns:
                     display_upload["tahun"] = pd.to_numeric(display_upload["tahun"], errors="coerce").fillna(2025).astype(int).astype(str)
 
-                st.markdown("### Preview Data")
+                st.markdown("### Preview Data (20 Baris Pertama)")
                 st.dataframe(
                     display_upload,
                     use_container_width=True,
                     hide_index=True,
                     column_config={"tahun": st.column_config.TextColumn("tahun")},
                 )
-                st.caption(f"Total baris: **{len(preview_df)}**")
+                st.caption(f"Total baris valid: **{len(preview_df)}**")
 
                 required = ["tahun", "nama_opd", "jenis_belanja", "bulan", "pagu_anggaran", "realisasi"]
                 missing = [c for c in required if c not in preview_df.columns]
@@ -822,7 +826,7 @@ if page == "📝 Kelola Data":
                 if missing:
                     st.error(f"❌ Kolom tidak lengkap. Kolom yang hilang: {', '.join(missing)}")
                 else:
-                    st.success("✅ Format file valid!")
+                    st.success("✅ Format file valid & siap disimpan!")
                     if "🔄" in upload_mode:
                         btn_label = "💾 Perbarui & Tambahkan Data Baru"
                     else:

@@ -319,6 +319,58 @@ def bulk_save(df: pd.DataFrame, filepath: Optional[str] = None) -> None:
     save_data(df, path)
 
 
+def validate_and_sanitize_excel(df: pd.DataFrame) -> Tuple[pd.DataFrame, List[str]]:
+    """
+    Melakukan validasi dan sanitasi data Excel yang diupload sesuai best practice:
+    1. Memastikan kolom utama tersedia.
+    2. Membersihkan spasi pada string (jenis_belanja, penanggungjawab, kode_rekening).
+    3. Mengonversi tipe data numerik (tahun, bulan, pagu_anggaran, realisasi).
+    4. Mengembalikan DataFrame yang bersih dan list peringatan.
+    """
+    warnings = []
+    clean_df = df.copy()
+
+    clean_df.columns = clean_df.columns.astype(str).str.strip().str.lower().str.replace(" ", "_")
+
+    required = ["tahun", "jenis_belanja", "bulan", "pagu_anggaran", "realisasi"]
+    missing = [c for c in required if c not in clean_df.columns]
+    if missing:
+        return clean_df, [f"Kolom wajib tidak ditemukan: {', '.join(missing)}"]
+
+    if "nama_opd" not in clean_df.columns:
+        clean_df["nama_opd"] = NAMA_OPD
+    else:
+        clean_df["nama_opd"] = clean_df["nama_opd"].fillna(NAMA_OPD)
+
+    if "penanggungjawab" not in clean_df.columns:
+        clean_df["penanggungjawab"] = "Sekretariat"
+    else:
+        clean_df["penanggungjawab"] = clean_df["penanggungjawab"].fillna("Sekretariat").astype(str).str.strip()
+
+    if "kode_rekening" not in clean_df.columns:
+        clean_df["kode_rekening"] = ""
+    else:
+        clean_df["kode_rekening"] = clean_df["kode_rekening"].fillna("").astype(str).str.strip()
+
+    clean_df["jenis_belanja"] = clean_df["jenis_belanja"].fillna("").astype(str).str.strip()
+
+    clean_df["tahun"] = pd.to_numeric(clean_df["tahun"], errors="coerce").fillna(2025).astype(int)
+    clean_df["bulan"] = pd.to_numeric(clean_df["bulan"], errors="coerce").fillna(1).astype(int)
+    clean_df["pagu_anggaran"] = pd.to_numeric(clean_df["pagu_anggaran"], errors="coerce").fillna(0.0).abs()
+    clean_df["realisasi"] = pd.to_numeric(clean_df["realisasi"], errors="coerce").fillna(0.0).abs()
+
+    invalid_bulan = clean_df[(clean_df["bulan"] < 1) | (clean_df["bulan"] > 12)]
+    if not invalid_bulan.empty:
+        warnings.append(f"Terdapat {len(invalid_bulan)} baris dengan nilai bulan tidak valid (di luar 1-12).")
+        clean_df["bulan"] = clean_df["bulan"].clip(1, 12)
+
+    invalid_jenis = clean_df[clean_df["jenis_belanja"] == ""]
+    if not invalid_jenis.empty:
+        warnings.append(f"Terdapat {len(invalid_jenis)} baris dengan nama Sub-Kegiatan kosong.")
+
+    return clean_df, warnings
+
+
 def merge_save_records(new_df: pd.DataFrame, filepath: Optional[str] = None) -> int:
     """
     Menggabungkan (upsert) data Excel baru ke dalam database:
