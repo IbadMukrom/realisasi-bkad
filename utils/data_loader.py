@@ -32,6 +32,10 @@ def _process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     """
     Normalisasi kolom, validasi, dan tambah kolom turunan.
     """
+    if df.empty:
+        return df.copy()
+
+    df = df.copy()
     # Normalisasi nama kolom: lowercase, strip spasi
     df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
 
@@ -43,30 +47,44 @@ def _process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
             f"Kolom yang tersedia: {', '.join(df.columns)}"
         )
 
-    # Pastikan tipe data numerik
+    # Pastikan tipe data numerik dan bersihkan string
     df["pagu_anggaran"] = pd.to_numeric(df["pagu_anggaran"], errors="coerce").fillna(0)
     df["realisasi"] = pd.to_numeric(df["realisasi"], errors="coerce").fillna(0)
     df["bulan"] = pd.to_numeric(df["bulan"], errors="coerce").fillna(1).astype(int)
-    df["tahun"] = pd.to_numeric(df["tahun"], errors="coerce").fillna(2024).astype(int)
+    df["tahun"] = pd.to_numeric(df["tahun"], errors="coerce").fillna(2025).astype(int)
+
+    if "penanggungjawab" in df.columns:
+        df["penanggungjawab"] = df["penanggungjawab"].fillna("Sekretariat").astype(str).str.strip()
+    else:
+        df["penanggungjawab"] = "Sekretariat"
+
+    if "kode_rekening" in df.columns:
+        df["kode_rekening"] = df["kode_rekening"].fillna("").astype(str).str.strip().str.replace(r'\.0$', '', regex=True)
+    else:
+        df["kode_rekening"] = ""
+
+    if "jenis_belanja" in df.columns:
+        df["jenis_belanja"] = df["jenis_belanja"].fillna("").astype(str).str.strip()
+    else:
+        df["jenis_belanja"] = ""
 
     # Tambah kolom turunan
     df["nama_bulan"] = df["bulan"].map(NAMA_BULAN)
     df["triwulan"] = ((df["bulan"] - 1) // 3 + 1)
     df["nama_triwulan"] = df["triwulan"].map(NAMA_TRIWULAN)
 
-    # Urutkan berdasarkan urutan bulan untuk akumulasi
-    sort_cols = [c for c in ["tahun", "penanggungjawab", "kode_rekening", "jenis_belanja", "bulan"] if c in df.columns]
-    df = df.sort_values(sort_cols)
-
     group_cols = [c for c in ["tahun", "penanggungjawab", "kode_rekening", "jenis_belanja"] if c in df.columns]
     if not group_cols:
-        group_cols = ["tahun"]
+        group_cols = ["tahun", "jenis_belanja"]
 
-    # Hitung Realisasi Kumulatif (terakumulasi dari bulan ke bulan)
-    df["realisasi_kumulatif"] = df.groupby(group_cols)["realisasi"].cumsum()
+    # Urutkan berdasarkan urutan bulan untuk akumulasi
+    df = df.sort_values(group_cols + ["bulan"])
+
+    # Hitung Realisasi Kumulatif (terakumulasi dari bulan ke bulan per item)
+    df["realisasi_kumulatif"] = df.groupby(group_cols, dropna=False)["realisasi"].cumsum()
     df["sisa_anggaran"] = df["pagu_anggaran"] - df["realisasi_kumulatif"]
     df["persentase_realisasi"] = (
-        (df["realisasi_kumulatif"] / df["pagu_anggaran"] * 100)
+        (df["realisasi_kumulatif"] / df["pagu_anggaran"].replace(0, 1) * 100)
         .round(2)
         .fillna(0)
     )
@@ -110,12 +128,15 @@ def read_smart_excel(source) -> pd.DataFrame:
         return pd.read_excel(source)
 
 
-@st.cache_data
-def load_data(filepath: str) -> pd.DataFrame:
+@st.cache_data(ttl="5s", show_spinner=False)
+def load_data(filepath: Optional[str] = None) -> pd.DataFrame:
     """
-    Membaca file Excel dan memvalidasi kolom yang diperlukan.
+    Membaca data mentah (Google Sheets/Excel) dan memproses kolom turunan & akumulasi.
     """
-    df = read_smart_excel(filepath)
+    from utils.data_manager import load_raw_data
+    df = load_raw_data(filepath)
+    if df.empty:
+        return df
     return _process_dataframe(df)
 
 
