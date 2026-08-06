@@ -947,7 +947,7 @@ elif page == "📊 Dashboard":
     with col1:
         st.markdown(f"""
         <div class="metric-card">
-            <div class="metric-label">💰 Total Pagu Tahunan</div>
+            <div class="metric-label">💰 Total Pagu Anggaran</div>
             <div class="metric-value blue">{format_rupiah(summary['total_pagu'])}</div>
         </div>
         """, unsafe_allow_html=True)
@@ -963,7 +963,7 @@ elif page == "📊 Dashboard":
     with col3:
         st.markdown(f"""
         <div class="metric-card">
-            <div class="metric-label">📉 Sisa Pagu Tahunan</div>
+            <div class="metric-label">📉 Sisa Pagu Anggaran</div>
             <div class="metric-value red">{format_rupiah(summary['total_sisa'])}</div>
         </div>
         """, unsafe_allow_html=True)

@@ -464,7 +464,7 @@ def generate_formatted_excel_report(df_filtered: pd.DataFrame, summary: dict, ta
     ws["A5"].font = BOLD_FONT
 
     summary_rows = [
-        ("Total Pagu Tahunan", summary.get("total_pagu", 0.0), "Rp #,##0"),
+        ("Total Pagu Anggaran", summary.get("total_pagu", 0.0), "Rp #,##0"),
         ("Total Realisasi Kumulatif", summary.get("total_realisasi", 0.0), "Rp #,##0"),
         ("Total Sisa Anggaran", summary.get("total_sisa", 0.0), "Rp #,##0"),
         ("Persentase Capaian Overall", summary.get("persentase", 0.0) / 100.0, "0.00%"),
@@ -661,7 +661,7 @@ def generate_formatted_pdf_report(df_filtered: pd.DataFrame, summary: dict, tahu
 
     sum_data = [
         [
-            Paragraph("<b>Total Pagu Tahunan</b>", cell_bold),
+            Paragraph("<b>Total Pagu Anggaran</b>", cell_bold),
             Paragraph(pagu_str, cell_bold),
             Paragraph("<b>Total Realisasi Kumulatif</b>", cell_bold),
             Paragraph(real_str, cell_bold),
