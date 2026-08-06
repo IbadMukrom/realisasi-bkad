@@ -247,14 +247,14 @@ def get_pj_comparison(df: pd.DataFrame) -> pd.DataFrame:
     if "kode_rekening" in df.columns:
         group_cols.insert(0, "kode_rekening")
 
-    idx = df.groupby(group_cols)["bulan"].idxmax()
+    idx = df.groupby(group_cols, dropna=False)["bulan"].idxmax()
     latest = df.loc[idx]
 
     real_col = "realisasi_kumulatif" if "realisasi_kumulatif" in latest.columns else "realisasi"
 
     pj_df = (
         latest
-        .groupby("penanggungjawab")
+        .groupby("penanggungjawab", dropna=False)
         .agg(
             pagu_anggaran=("pagu_anggaran", "sum"),
             realisasi=(real_col, "sum"),
@@ -263,7 +263,7 @@ def get_pj_comparison(df: pd.DataFrame) -> pd.DataFrame:
     )
     pj_df["sisa"] = pj_df["pagu_anggaran"] - pj_df["realisasi"]
     pj_df["persentase"] = (
-        (pj_df["realisasi"] / pj_df["pagu_anggaran"] * 100)
+        (pj_df["realisasi"] / pj_df["pagu_anggaran"].replace(0, 1) * 100)
         .round(2)
         .fillna(0)
     )
@@ -295,7 +295,7 @@ def get_monthly_trend(df: pd.DataFrame) -> pd.DataFrame:
     )
     monthly["nama_bulan"] = monthly["bulan"].map(NAMA_BULAN)
 
-    idx = df.groupby(group_cols)["bulan"].idxmax()
+    idx = df.groupby(group_cols, dropna=False)["bulan"].idxmax()
     latest = df.loc[idx]
     monthly["pagu_anggaran"] = latest["pagu_anggaran"].sum()
 
@@ -318,7 +318,7 @@ def get_quarterly_trend(df: pd.DataFrame) -> pd.DataFrame:
 
     real_col = "realisasi_kumulatif" if "realisasi_kumulatif" in df_copy.columns else "realisasi"
 
-    idx = df_copy.groupby(group_cols + ["triwulan"])["bulan"].idxmax()
+    idx = df_copy.groupby(group_cols + ["triwulan"], dropna=False)["bulan"].idxmax()
     latest_per_q = df_copy.loc[idx]
 
     quarterly = (
@@ -330,13 +330,13 @@ def get_quarterly_trend(df: pd.DataFrame) -> pd.DataFrame:
         .reset_index()
     )
 
-    idx_annual = df.groupby(group_cols)["bulan"].idxmax()
+    idx_annual = df.groupby(group_cols, dropna=False)["bulan"].idxmax()
     total_pagu = df.loc[idx_annual]["pagu_anggaran"].sum()
 
     quarterly["pagu_anggaran"] = total_pagu
     quarterly["nama_triwulan"] = quarterly["triwulan"].map(NAMA_TRIWULAN)
     quarterly["persentase"] = (
-        (quarterly["realisasi_kumulatif"] / total_pagu * 100).round(2) if total_pagu > 0 else 0
+        (quarterly["realisasi_kumulatif"] / max(total_pagu, 1.0) * 100).round(2) if total_pagu > 0 else 0.0
     )
 
     return quarterly
@@ -354,14 +354,14 @@ def get_belanja_comparison(df: pd.DataFrame) -> pd.DataFrame:
     if not group_cols:
         group_cols = ["jenis_belanja"]
 
-    idx = df.groupby(group_cols)["bulan"].idxmax()
+    idx = df.groupby(group_cols, dropna=False)["bulan"].idxmax()
     latest = df.loc[idx]
 
     real_col = "realisasi_kumulatif" if "realisasi_kumulatif" in latest.columns else "realisasi"
 
     comparison = (
         latest
-        .groupby("jenis_belanja")
+        .groupby("jenis_belanja", dropna=False)
         .agg(
             pagu_anggaran=("pagu_anggaran", "first"),  # Pagu tetap per jenis belanja
             realisasi=(real_col, "sum"),
@@ -370,7 +370,7 @@ def get_belanja_comparison(df: pd.DataFrame) -> pd.DataFrame:
     )
     comparison["sisa"] = comparison["pagu_anggaran"] - comparison["realisasi"]
     comparison["persentase"] = (
-        (comparison["realisasi"] / comparison["pagu_anggaran"] * 100)
+        (comparison["realisasi"] / comparison["pagu_anggaran"].replace(0, 1) * 100)
         .round(2)
         .fillna(0)
     )
@@ -390,14 +390,14 @@ def get_belanja_composition(df: pd.DataFrame) -> pd.DataFrame:
     if not group_cols:
         group_cols = ["jenis_belanja"]
 
-    idx = df.groupby(group_cols)["bulan"].idxmax()
+    idx = df.groupby(group_cols, dropna=False)["bulan"].idxmax()
     latest = df.loc[idx]
 
     real_col = "realisasi_kumulatif" if "realisasi_kumulatif" in latest.columns else "realisasi"
 
     composition = (
         latest
-        .groupby("jenis_belanja")
+        .groupby("jenis_belanja", dropna=False)
         .agg(
             pagu_anggaran=("pagu_anggaran", "first"),  # Pagu tetap per jenis belanja
             realisasi=(real_col, "sum"),
@@ -406,10 +406,10 @@ def get_belanja_composition(df: pd.DataFrame) -> pd.DataFrame:
     )
     total = composition["realisasi"].sum()
     composition["persentase_komposisi"] = (
-        (composition["realisasi"] / total * 100)
+        (composition["realisasi"] / max(total, 1.0) * 100)
         .round(2)
         .fillna(0)
-    ) if total > 0 else 0
+    ) if total > 0 else 0.0
 
     return composition
 

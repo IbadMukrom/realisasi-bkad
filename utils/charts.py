@@ -58,15 +58,28 @@ def format_rupiah_titik(value: float) -> str:
         return "0"
 
 
-def parse_rupiah_input(val_str: str) -> float:
+def parse_rupiah_input(val_str: Any) -> float:
     """
     Membersihkan string input (misal '1.000.000', '1,000,000', 'Rp 1.000.000')
-    menjadi float angka murni.
+    menjadi float angka murni secara aman.
     """
-    if not val_str:
+    if val_str is None or pd.isna(val_str):
         return 0.0
+    if isinstance(val_str, (int, float)):
+        return float(val_str)
+
+    val = str(val_str).strip()
+    if not val:
+        return 0.0
+
     import re
-    cleaned = re.sub(r"[^\d]", "", str(val_str))
+    if re.match(r"^\d+\.\d+$", val) and val.count(".") == 1 and "," not in val:
+        try:
+            return float(val)
+        except ValueError:
+            pass
+
+    cleaned = re.sub(r"[^\d]", "", val)
     return float(cleaned) if cleaned else 0.0
 
 
