@@ -10,6 +10,7 @@ import os
 
 from utils.data_loader import (
     load_data,
+    _process_dataframe,
     load_uploaded_data,
     read_smart_excel,
     filter_data,
