@@ -6,25 +6,25 @@ import pandas as pd
 from utils.data_loader import NAMA_BULAN
 
 
-# Palet warna konsisten
+# Palet warna konsisten & premium
 COLORS = {
-    "primary": "#2ECC71",      # Hijau utama
-    "secondary": "#3498DB",    # Biru
-    "accent": "#E74C3C",       # Merah
-    "warning": "#F39C12",      # Kuning/oranye
-    "info": "#9B59B6",         # Ungu
-    "pagu": "#3498DB",         # Biru untuk pagu
-    "realisasi": "#2ECC71",    # Hijau untuk realisasi
-    "sisa": "#E74C3C",         # Merah untuk sisa
+    "primary": "#00E676",      # Emerald Green Glow
+    "secondary": "#29B6F6",    # Electric Blue
+    "accent": "#FF5252",       # Coral Red
+    "warning": "#FFCA28",      # Amber Gold
+    "info": "#AB47BC",         # Vivid Purple
+    "pagu": "#29B6F6",         # Electric Blue untuk pagu
+    "realisasi": "#00E676",    # Emerald Green untuk realisasi
+    "sisa": "#FF5252",         # Coral Red untuk sisa
     "bg_dark": "#0E1117",
     "bg_card": "#1B2838",
-    "text": "#FAFAFA",
-    "text_muted": "#8899A6",
+    "text": "#F8FAFC",
+    "text_muted": "#94A3B8",
 }
 
 COLOR_SEQUENCE = [
-    "#2ECC71", "#3498DB", "#E74C3C", "#F39C12", "#9B59B6",
-    "#1ABC9C", "#E67E22", "#2980B9", "#C0392B", "#8E44AD",
+    "#00E676", "#29B6F6", "#FF5252", "#FFCA28", "#AB47BC",
+    "#26A69A", "#FFA726", "#42A5F5", "#EC407A", "#7E57C2",
 ]
 
 LAYOUT_DEFAULTS = dict(
