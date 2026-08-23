@@ -310,6 +310,10 @@ def create_belanja_comparison(belanja_df: pd.DataFrame, max_items: Optional[int]
     fig = go.Figure()
 
     # Pagu
+    pagu_hover = [
+        f"<b>{name}</b><br>Pagu Anggaran: <b>{format_rupiah(v)}</b>"
+        for name, v in zip(original_labels, df_plot["pagu_anggaran"])
+    ]
     fig.add_trace(go.Bar(
         y=wrapped_labels,
         x=df_plot["pagu_anggaran"],
@@ -317,11 +321,15 @@ def create_belanja_comparison(belanja_df: pd.DataFrame, max_items: Optional[int]
         marker_color=COLORS["pagu"],
         marker_line=dict(width=0),
         orientation="h",
-        customdata=[[name, format_rupiah(v)] for name, v in zip(original_labels, df_plot["pagu_anggaran"])],
-        hovertemplate="<b>%{customdata[0]}</b><br>Pagu: <b>%{customdata[1]}</b><extra></extra>",
+        hovertext=pagu_hover,
+        hovertemplate="%{hovertext}<extra></extra>",
     ))
 
     # Realisasi
+    real_hover = [
+        f"<b>{name}</b><br>Realisasi: <b>{format_rupiah(v)}</b> ({p:.1f}%)"
+        for name, v, p in zip(original_labels, df_plot["realisasi"], df_plot["persentase"])
+    ]
     fig.add_trace(go.Bar(
         y=wrapped_labels,
         x=df_plot["realisasi"],
@@ -333,8 +341,8 @@ def create_belanja_comparison(belanja_df: pd.DataFrame, max_items: Optional[int]
         textposition="outside",
         textfont=dict(size=11, color=COLORS["text"]),
         cliponaxis=False,
-        customdata=[[name, format_rupiah(v), f"{p:.1f}%"] for name, v, p in zip(original_labels, df_plot["realisasi"], df_plot["persentase"])],
-        hovertemplate="<b>%{customdata[0]}</b><br>Realisasi: <b>%{customdata[1]}</b> (%{customdata[2]})<extra></extra>",
+        hovertext=real_hover,
+        hovertemplate="%{hovertext}<extra></extra>",
     ))
 
     row_height = 46
@@ -387,17 +395,25 @@ def create_pj_comparison(pj_df: pd.DataFrame) -> go.Figure:
     fig = go.Figure()
 
     # Pagu
+    pagu_hover = [
+        f"<b>{name}</b><br>Pagu Anggaran: <b>{format_rupiah(v)}</b>"
+        for name, v in zip(original_labels, pj_df["pagu_anggaran"])
+    ]
     fig.add_trace(go.Bar(
         y=wrapped_labels,
         x=pj_df["pagu_anggaran"],
         name="Pagu Anggaran",
         marker_color=COLORS["pagu"],
         orientation="h",
-        customdata=[[name, format_rupiah(v)] for name, v in zip(original_labels, pj_df["pagu_anggaran"])],
-        hovertemplate="<b>%{customdata[0]}</b><br>Pagu: <b>%{customdata[1]}</b><extra></extra>",
+        hovertext=pagu_hover,
+        hovertemplate="%{hovertext}<extra></extra>",
     ))
 
     # Realisasi
+    real_hover = [
+        f"<b>{name}</b><br>Realisasi: <b>{format_rupiah(v)}</b> ({p:.1f}%)"
+        for name, v, p in zip(original_labels, pj_df["realisasi"], pj_df["persentase"])
+    ]
     fig.add_trace(go.Bar(
         y=wrapped_labels,
         x=pj_df["realisasi"],
@@ -408,8 +424,8 @@ def create_pj_comparison(pj_df: pd.DataFrame) -> go.Figure:
         textposition="outside",
         textfont=dict(size=11, color=COLORS["text"]),
         cliponaxis=False,
-        customdata=[[name, format_rupiah(v), f"{p:.1f}%"] for name, v, p in zip(original_labels, pj_df["realisasi"], pj_df["persentase"])],
-        hovertemplate="<b>%{customdata[0]}</b><br>Realisasi: <b>%{customdata[1]}</b> (%{customdata[2]})<extra></extra>",
+        hovertext=real_hover,
+        hovertemplate="%{hovertext}<extra></extra>",
     ))
 
     fig.update_layout(
@@ -499,6 +515,11 @@ def create_donut_chart(composition_df: pd.DataFrame, max_slices: int = 5) -> go.
     if "Lainnya" in plot_df.iloc[-1]["jenis_belanja"]:
         colors[-1] = "#64748B"
 
+    donut_hover = [
+        f"<b>{name}</b><br>💰 Realisasi: <b>{format_rupiah(v)}</b>"
+        for name, v in zip(plot_df["jenis_belanja"], plot_df["realisasi"])
+    ]
+
     fig = go.Figure(go.Pie(
         labels=clean_labels,
         values=plot_df["realisasi"],
@@ -511,12 +532,8 @@ def create_donut_chart(composition_df: pd.DataFrame, max_slices: int = 5) -> go.
         textposition="inside",
         textfont=dict(size=11, color="#FFFFFF", family="Inter, sans-serif"),
         insidetextorientation="horizontal",
-        customdata=[[name, format_rupiah(v)] for name, v in zip(plot_df["jenis_belanja"], plot_df["realisasi"])],
-        hovertemplate=(
-            "<b>%{customdata[0]}</b><br>"
-            "💰 Realisasi: <b>%{customdata[1]}</b><br>"
-            "📊 Porsi: <b>%{percent}</b><extra></extra>"
-        ),
+        hovertext=donut_hover,
+        hovertemplate="%{hovertext}<br>📊 Porsi: <b>%{percent}</b><extra></extra>",
     ))
 
     fig.update_layout(
@@ -651,17 +668,21 @@ def create_heatmap_belanja_monthly(
         [1.0, "#00E676"],       # Neon emerald untuk capaian 100%+
     ]
 
-    # Customdata untuk hover detail lengkap (nama tanpa dipotong <br>)
-    customdata_matrix = []
-    for orig_name in original_labels:
-        customdata_matrix.append([orig_name] * len(pivot.columns))
+    # Hovertext untuk detail lengkap (nama tanpa dipotong <br>)
+    heatmap_hover = []
+    for orig_name, row_vals in zip(original_labels, pivot.values):
+        row_hover = [
+            f"<b>{orig_name}</b><br>📅 Bulan: <b>{col_name}</b><br>📊 Realisasi: <b>{val:.1f}%</b>"
+            for col_name, val in zip(pivot.columns, row_vals)
+        ]
+        heatmap_hover.append(row_hover)
 
     fig = go.Figure(
         go.Heatmap(
             z=pivot.values,
             x=pivot.columns.tolist(),
             y=wrapped_labels,
-            customdata=customdata_matrix,
+            hovertext=heatmap_hover,
             colorscale=colorscale,
             zmin=0,
             zmax=100,
@@ -670,7 +691,7 @@ def create_heatmap_belanja_monthly(
             text=text_matrix,
             texttemplate="%{text}",
             textfont=dict(size=11, color="#FFFFFF", family="Inter, sans-serif"),
-            hovertemplate="<b>%{customdata}</b><br>📅 Bulan: <b>%{x}</b><br>📊 Realisasi: <b>%{z:.1f}%</b><extra></extra>",
+            hovertemplate="%{hovertext}<extra></extra>",
             colorbar=dict(
                 title=dict(
                     text="<b>Realisasi</b>",
