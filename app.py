@@ -225,6 +225,12 @@ st.markdown("""
 
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+    .stApp [data-testid="stToolbar"] {display: none !important;}
+    .stApp [data-testid="manage-app-button"] {display: none !important;}
+    .viewerBadge_container__r5tak {display: none !important;}
+    .styles_viewerBadge__CvC9N {display: none !important;}
+    ._profileContainer_gzau3_53 {display: none !important;}
+    ._profilePreview_gzau3_63 {display: none !important;}
 
     .custom-divider {
         height: 1px;
