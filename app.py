@@ -1044,9 +1044,45 @@ elif page == "📊 Dashboard":
 
     # ── Heatmap ──
     st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-header">🗓️ Heatmap Realisasi per Jenis Belanja per Bulan</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">🗓️ Heatmap Intensitas Realisasi Bulanan</div>', unsafe_allow_html=True)
 
-    heatmap_fig = create_heatmap_belanja_monthly(df_filtered)
+    col_hm_opt1, col_hm_opt2 = st.columns([3, 2])
+    with col_hm_opt1:
+        hm_options = ["Sub-Kegiatan / Jenis Belanja"]
+        if "penanggungjawab" in df_filtered.columns and df_filtered["penanggungjawab"].nunique() > 1:
+            hm_options.append("Bidang Penanggung Jawab")
+
+        selected_hm_group = st.radio(
+            "Tampilkan Heatmap Berdasarkan:",
+            options=hm_options,
+            horizontal=True,
+            key="heatmap_group_by",
+        )
+
+    group_col = "penanggungjawab" if selected_hm_group == "Bidang Penanggung Jawab" else "jenis_belanja"
+
+    with col_hm_opt2:
+        if group_col == "jenis_belanja" and df_filtered["jenis_belanja"].nunique() > 15:
+            max_rows = st.selectbox(
+                "Jumlah Baris Sub-Kegiatan:",
+                options=["Semua", "Top 10 (Realisasi Tertinggi)", "Top 15", "Top 25"],
+                index=0,
+                key="heatmap_limit",
+            )
+            if max_rows == "Semua":
+                limit_val = None
+            elif "10" in max_rows:
+                limit_val = 10
+            elif "15" in max_rows:
+                limit_val = 15
+            elif "25" in max_rows:
+                limit_val = 25
+            else:
+                limit_val = None
+        else:
+            limit_val = None
+
+    heatmap_fig = create_heatmap_belanja_monthly(df_filtered, group_col=group_col, max_items=limit_val)
     st.plotly_chart(heatmap_fig, use_container_width=True, config={"displayModeBar": False})
 
     # ── Detail Table ──

@@ -1,9 +1,10 @@
 """
 Modul untuk membuat chart Plotly untuk dashboard realisasi anggaran BKAD.
 """
+import textwrap
+from typing import Any, Optional
 import plotly.graph_objects as go
 import pandas as pd
-from typing import Any
 from utils.data_loader import NAMA_BULAN
 
 
@@ -352,55 +353,171 @@ def create_donut_chart(composition_df: pd.DataFrame) -> go.Figure:
     return fig
 
 
-def create_heatmap_belanja_monthly(df: pd.DataFrame) -> go.Figure:
+def _wrap_label(text: str, width: int = 36) -> str:
+    """Bungkus teks label yang panjang dengan <br> agar rapi di sumbu Y."""
+    if not text or pd.isna(text):
+        return ""
+    text_str = str(text).strip()
+    if len(text_str) <= width:
+        return text_str
+    lines = textwrap.wrap(text_str, width=width, break_long_words=False)
+    return "<br>".join(lines)
+
+
+def create_heatmap_belanja_monthly(
+    df: pd.DataFrame,
+    group_col: str = "jenis_belanja",
+    max_items: Optional[int] = None
+) -> go.Figure:
     """
-    Membuat heatmap persentase realisasi per jenis belanja per bulan.
+    Membuat heatmap persentase realisasi per jenis belanja / bidang per bulan dengan desain modern & rapi.
     """
+    if df.empty or group_col not in df.columns:
+        fig = go.Figure()
+        fig.update_layout(
+            **_merged_layout(
+                annotations=[
+                    dict(
+                        text="Tidak ada data untuk ditampilkan pada Heatmap",
+                        showarrow=False,
+                        font=dict(size=14, color=COLORS["text_muted"]),
+                    )
+                ],
+                height=250,
+            )
+        )
+        return fig
+
     agg = (
-        df.groupby(["jenis_belanja", "bulan"])
+        df.groupby([group_col, "bulan"])
         .agg(
             pagu_anggaran=("pagu_anggaran", "sum"),
             realisasi=("realisasi", "sum"),
         )
         .reset_index()
     )
-    agg["persentase"] = (agg["realisasi"] / agg["pagu_anggaran"] * 100).round(1)
+    agg["persentase"] = (
+        agg["realisasi"] / agg["pagu_anggaran"].replace(0, float("nan")) * 100
+    ).fillna(0).round(1)
 
-    pivot = agg.pivot(index="jenis_belanja", columns="bulan", values="persentase").fillna(0)
+    pivot = agg.pivot(index=group_col, columns="bulan", values="persentase").fillna(0)
 
-    # Rename columns to bulan names
-    pivot.columns = [NAMA_BULAN[b] for b in pivot.columns]
+    if pivot.empty:
+        fig = go.Figure()
+        fig.update_layout(
+            **_merged_layout(
+                annotations=[
+                    dict(
+                        text="Data tidak mencukupi untuk membuat heatmap",
+                        showarrow=False,
+                        font=dict(size=14, color=COLORS["text_muted"]),
+                    )
+                ],
+                height=250,
+            )
+        )
+        return fig
 
-    fig = go.Figure(go.Heatmap(
-        z=pivot.values,
-        x=pivot.columns.tolist(),
-        y=pivot.index.tolist(),
-        colorscale=[
-            [0, "rgba(231,76,60,0.3)"],
-            [0.5, "rgba(243,156,18,0.5)"],
-            [0.8, "rgba(46,204,113,0.5)"],
-            [1, "rgba(46,204,113,0.9)"],
-        ],
-        text=[[f"{v:.1f}%" for v in row] for row in pivot.values],
-        texttemplate="%{text}",
-        textfont=dict(size=10, color=COLORS["text"]),
-        hovertemplate="<b>%{y}</b><br>%{x}: %{z:.1f}%<extra></extra>",
-        colorbar=dict(
-            title=dict(
-                text="Realisasi %",
-                font=dict(color=COLORS["text_muted"]),
+    # Urutkan berdasarkan rata-rata realisasi tertinggi agar rapi & hierarkis
+    avg_realisasi = pivot.mean(axis=1)
+    pivot = pivot.loc[avg_realisasi.sort_values(ascending=False).index]
+
+    if max_items and len(pivot) > max_items:
+        pivot = pivot.iloc[:max_items]
+
+    # Map nama bulan secara terurut
+    ordered_months = [b for b in sorted(pivot.columns) if b in NAMA_BULAN]
+    if ordered_months:
+        pivot = pivot[ordered_months]
+        pivot.columns = [NAMA_BULAN[b] for b in ordered_months]
+
+    original_labels = [str(idx) for idx in pivot.index.tolist()]
+    wrapped_labels = [_wrap_label(lbl, width=38) for lbl in original_labels]
+
+    # Format teks di dalam sel
+    text_matrix = []
+    for row in pivot.values:
+        row_text = []
+        for v in row:
+            if v == 0:
+                row_text.append("0%")
+            elif v >= 100:
+                row_text.append(f"{v:.0f}%")
+            else:
+                row_text.append(f"{v:.1f}%")
+        text_matrix.append(row_text)
+
+    # Palet warna modern dark theme dengan transisi halus
+    colorscale = [
+        [0.0, "#131b2e"],       # Dark slate blue untuk 0%
+        [0.05, "#1f293d"],      # Slate
+        [0.2, "#881337"],       # Merah marun untuk realisasi rendah (<20%)
+        [0.45, "#b45309"],      # Amber untuk realisasi sedang (20-50%)
+        [0.7, "#047857"],       # Emerald green untuk realisasi baik (50-80%)
+        [0.9, "#10b981"],       # Terang emerald (80-99%)
+        [1.0, "#00E676"],       # Neon emerald untuk capaian 100%+
+    ]
+
+    # Customdata untuk hover detail lengkap (nama tanpa dipotong <br>)
+    customdata_matrix = []
+    for orig_name in original_labels:
+        customdata_matrix.append([orig_name] * len(pivot.columns))
+
+    fig = go.Figure(
+        go.Heatmap(
+            z=pivot.values,
+            x=pivot.columns.tolist(),
+            y=wrapped_labels,
+            customdata=customdata_matrix,
+            colorscale=colorscale,
+            zmin=0,
+            zmax=100,
+            xgap=4,
+            ygap=4,
+            text=text_matrix,
+            texttemplate="%{text}",
+            textfont=dict(size=11, color="#FFFFFF", family="Inter, sans-serif"),
+            hovertemplate="<b>%{customdata}</b><br>📅 Bulan: <b>%{x}</b><br>📊 Realisasi: <b>%{z:.1f}%</b><extra></extra>",
+            colorbar=dict(
+                title=dict(
+                    text="<b>Realisasi</b>",
+                    font=dict(color=COLORS["text"], size=12),
+                    side="top",
+                ),
+                tickfont=dict(color=COLORS["text_muted"], size=10),
+                ticksuffix="%",
+                tickvals=[0, 25, 50, 75, 100],
+                thickness=14,
+                len=0.8,
+                outlinewidth=0,
             ),
-            tickfont=dict(color=COLORS["text_muted"]),
-        ),
-    ))
+        )
+    )
+
+    # Dynamic margin and height calculation
+    left_margin = 250 if group_col == "jenis_belanja" else 180
+    row_height = 42
+    total_height = max(300, len(pivot) * row_height + 100)
 
     fig.update_layout(
         **_merged_layout(
             title="",
-            xaxis=dict(title="", side="bottom"),
-            yaxis=dict(title="", autorange="reversed"),
-            margin=dict(l=20, r=20, t=20, b=20),
-            height=max(280, len(pivot) * 45),
+            xaxis=dict(
+                title="",
+                side="top",
+                tickfont=dict(size=11, color=COLORS["text"]),
+                gridcolor="rgba(0,0,0,0)",
+                showgrid=False,
+            ),
+            yaxis=dict(
+                title="",
+                autorange="reversed",
+                tickfont=dict(size=10.5, color=COLORS["text"]),
+                gridcolor="rgba(0,0,0,0)",
+                showgrid=False,
+            ),
+            margin=dict(l=left_margin, r=20, t=60, b=30),
+            height=total_height,
         )
     )
 
