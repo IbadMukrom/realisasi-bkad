@@ -32,6 +32,7 @@ from utils.charts import (
     create_heatmap_belanja_monthly,
     format_rupiah,
     format_rupiah_titik,
+    format_rupiah_ringkas,
     parse_rupiah_input,
 )
 from utils.data_manager import (
@@ -163,36 +164,95 @@ st.markdown("""
 
     /* Glassmorphism Metric Cards */
     .metric-card {
-        background: linear-gradient(145deg, rgba(30, 41, 59, 0.85) 0%, rgba(15, 23, 42, 0.95) 100%);
+        background: linear-gradient(145deg, rgba(26, 36, 56, 0.85) 0%, rgba(13, 19, 33, 0.95) 100%);
         backdrop-filter: blur(16px);
-        padding: 1.5rem 1.6rem;
+        padding: 1.15rem 1.25rem;
         border-radius: 16px;
         border: 1px solid rgba(255, 255, 255, 0.08);
-        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         position: relative;
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 135px;
     }
     .metric-card:hover {
-        transform: translateY(-4px) scale(1.01);
-        border-color: rgba(0, 230, 118, 0.4);
-        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45), 0 0 20px rgba(0, 230, 118, 0.1);
+        transform: translateY(-4px);
+    }
+    .metric-card.pagu-card { border-top: 3px solid #29B6F6; }
+    .metric-card.pagu-card:hover {
+        border-color: rgba(41, 182, 246, 0.6);
+        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45), 0 0 20px rgba(41, 182, 246, 0.18);
+    }
+    .metric-card.realisasi-card { border-top: 3px solid #00E676; }
+    .metric-card.realisasi-card:hover {
+        border-color: rgba(0, 230, 118, 0.6);
+        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45), 0 0 20px rgba(0, 230, 118, 0.18);
+    }
+    .metric-card.sisa-card { border-top: 3px solid #FF5252; }
+    .metric-card.sisa-card:hover {
+        border-color: rgba(255, 82, 82, 0.6);
+        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45), 0 0 20px rgba(255, 82, 82, 0.18);
+    }
+    .metric-card.persentase-card { border-top: 3px solid #FFCA28; }
+    .metric-card.persentase-card:hover {
+        border-color: rgba(255, 202, 40, 0.6);
+        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45), 0 0 20px rgba(255, 202, 40, 0.18);
+    }
+
+    .metric-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.35rem;
     }
     .metric-label {
         color: #94A3B8;
-        font-size: 0.78rem;
+        font-size: 0.73rem;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.08em;
-        margin-bottom: 0.6rem;
+        letter-spacing: 0.06em;
     }
+    .metric-icon-badge {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+    }
+    .metric-icon-badge.blue { background: rgba(41, 182, 246, 0.12); }
+    .metric-icon-badge.green { background: rgba(0, 230, 118, 0.12); }
+    .metric-icon-badge.red { background: rgba(255, 82, 82, 0.12); }
+    .metric-icon-badge.orange { background: rgba(255, 202, 40, 0.12); }
+
     .metric-value {
         font-family: 'JetBrains Mono', monospace;
-        font-size: 1.65rem;
+        font-size: 1.25rem;
         font-weight: 700;
-        margin: 0;
+        margin: 0.15rem 0 0.25rem 0;
         line-height: 1.25;
         letter-spacing: -0.02em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .curr-prefix {
+        font-size: 0.82rem;
+        font-weight: 600;
+        opacity: 0.8;
+        margin-right: 2px;
+    }
+    .metric-subtext {
+        font-size: 0.76rem;
+        color: #94A3B8;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 6px;
     }
     .metric-value.green { color: #00E676; text-shadow: 0 0 12px rgba(0, 230, 118, 0.25); }
     .metric-value.blue { color: #29B6F6; text-shadow: 0 0 12px rgba(41, 182, 246, 0.25); }
@@ -952,25 +1012,43 @@ elif page == "📊 Dashboard":
 
     with col1:
         st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-label">💰 Total Pagu Anggaran</div>
-            <div class="metric-value blue">{format_rupiah(summary['total_pagu'])}</div>
+        <div class="metric-card pagu-card">
+            <div class="metric-header">
+                <span class="metric-label">Total Pagu</span>
+                <div class="metric-icon-badge blue">💰</div>
+            </div>
+            <div class="metric-value blue">
+                <span class="curr-prefix">Rp</span>{format_rupiah_titik(summary['total_pagu'])}
+            </div>
+            <div class="metric-subtext">{format_rupiah_ringkas(summary['total_pagu'])}</div>
         </div>
         """, unsafe_allow_html=True)
 
     with col2:
         st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-label">✅ Total Realisasi</div>
-            <div class="metric-value green">{format_rupiah(summary['total_realisasi'])}</div>
+        <div class="metric-card realisasi-card">
+            <div class="metric-header">
+                <span class="metric-label">Total Realisasi</span>
+                <div class="metric-icon-badge green">✅</div>
+            </div>
+            <div class="metric-value green">
+                <span class="curr-prefix">Rp</span>{format_rupiah_titik(summary['total_realisasi'])}
+            </div>
+            <div class="metric-subtext">{format_rupiah_ringkas(summary['total_realisasi'])}</div>
         </div>
         """, unsafe_allow_html=True)
 
     with col3:
         st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-label">📉 Sisa Pagu Anggaran</div>
-            <div class="metric-value red">{format_rupiah(summary['total_sisa'])}</div>
+        <div class="metric-card sisa-card">
+            <div class="metric-header">
+                <span class="metric-label">Sisa Pagu</span>
+                <div class="metric-icon-badge red">📉</div>
+            </div>
+            <div class="metric-value red">
+                <span class="curr-prefix">Rp</span>{format_rupiah_titik(summary['total_sisa'])}
+            </div>
+            <div class="metric-subtext">{format_rupiah_ringkas(summary['total_sisa'])}</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -987,10 +1065,15 @@ elif page == "📊 Dashboard":
             badge_text = "Rendah"
 
         st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-label">📊 Persentase Realisasi ({latest_bln_name})</div>
+        <div class="metric-card persentase-card">
+            <div class="metric-header">
+                <span class="metric-label">Persentase ({latest_bln_name})</span>
+                <div class="metric-icon-badge orange">📊</div>
+            </div>
             <div class="metric-value orange">{pct:.2f}%</div>
-            <span class="status-badge {badge_class}">{badge_text}</span>
+            <div class="metric-subtext">
+                <span class="status-badge {badge_class}">{badge_text}</span>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 

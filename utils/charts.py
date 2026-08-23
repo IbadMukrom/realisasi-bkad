@@ -96,36 +96,113 @@ def _merged_layout(**overrides) -> dict:
     return merged
 
 
+def format_rupiah_ringkas(value: float) -> str:
+    """Format angka ke format Rupiah ringkas (misal: Rp 40 Miliar, Rp 1,5 Triliun)."""
+    try:
+        val = float(value)
+        abs_val = abs(val)
+        if abs_val >= 1e12:
+            return f"≈ Rp {val / 1e12:.2f} Triliun".replace(".", ",")
+        elif abs_val >= 1e9:
+            return f"≈ Rp {val / 1e9:.2f} Miliar".replace(".", ",")
+        elif abs_val >= 1e6:
+            return f"≈ Rp {val / 1e6:.2f} Juta".replace(".", ",")
+        elif abs_val >= 1e3:
+            return f"≈ Rp {val / 1e3:.1f} Ribu".replace(".", ",")
+        else:
+            return f"Rp {int(val):,}".replace(",", ".")
+    except (ValueError, TypeError):
+        return "Rp 0"
+
+
+def format_rupiah_sumbu(value: float) -> str:
+    """Format angka untuk label sumbu chart (misal: 40 M, 300 Jt)."""
+    try:
+        val = float(value)
+        abs_val = abs(val)
+        if abs_val >= 1e12:
+            return f"{val / 1e12:.1f} T".replace(".0 T", " T").replace(".", ",")
+        elif abs_val >= 1e9:
+            return f"{val / 1e9:.1f} M".replace(".0 M", " M").replace(".", ",")
+        elif abs_val >= 1e6:
+            return f"{val / 1e6:.1f} Jt".replace(".0 Jt", " Jt").replace(".", ",")
+        elif abs_val >= 1e3:
+            return f"{val / 1e3:.0f} Rb"
+        else:
+            return f"{int(val):,}".replace(",", ".")
+    except (ValueError, TypeError):
+        return "0"
+
+
 def create_gauge_chart(percentage: float, title: str = "Capaian Realisasi") -> go.Figure:
     """
-    Membuat gauge chart persentase capaian realisasi.
+    Membuat gauge chart persentase capaian realisasi yang modern & elegan.
     """
-    if percentage >= 80:
-        bar_color = COLORS["primary"]
-    elif percentage >= 50:
-        bar_color = COLORS["warning"]
+    pct = max(0.0, min(100.0, float(percentage)))
+
+    if pct >= 80:
+        bar_color = "#00E676"  # Emerald Green Glow
+        status_text = "Target Sangat Baik"
+        status_color = "#00E676"
+    elif pct >= 50:
+        bar_color = "#FFCA28"  # Amber Gold
+        status_text = "Cukup / On-Track"
+        status_color = "#FFCA28"
     else:
-        bar_color = COLORS["accent"]
+        bar_color = "#FF5252"  # Coral Red
+        status_text = "Perlu Perhatian"
+        status_color = "#FF5252"
 
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
-        value=percentage,
-        number=dict(suffix="%", font=dict(size=42, color=COLORS["text"])),
-        title=dict(text="", font=dict(size=1)),
+        value=pct,
+        number=dict(
+            suffix="%",
+            font=dict(size=36, color="#FFFFFF", family="Inter, sans-serif"),
+        ),
         gauge=dict(
             axis=dict(
                 range=[0, 100],
                 tickwidth=1,
                 tickcolor=COLORS["text_muted"],
-                tickfont=dict(color=COLORS["text_muted"]),
+                tickfont=dict(color=COLORS["text_muted"], size=10),
+                tickvals=[0, 25, 50, 75, 100],
+                ticksuffix="%",
             ),
-            bar=dict(color=bar_color, thickness=0.75),
-            bgcolor="rgba(255,255,255,0.05)",
+            bar=dict(
+                color=bar_color,
+                thickness=0.76,
+                line=dict(color="rgba(255,255,255,0.25)", width=1)
+            ),
+            bgcolor="rgba(255,255,255,0.06)",
             borderwidth=0,
+            steps=[
+                dict(range=[0, 50], color="rgba(255, 82, 82, 0.08)"),
+                dict(range=[50, 80], color="rgba(255, 202, 40, 0.08)"),
+                dict(range=[80, 100], color="rgba(0, 230, 118, 0.08)"),
+            ],
+            threshold=dict(
+                line=dict(color="#FFFFFF", width=3),
+                thickness=0.82,
+                value=pct,
+            ),
         ),
     ))
 
-    fig.update_layout(**_merged_layout(height=280))
+    fig.update_layout(
+        **_merged_layout(
+            margin=dict(l=25, r=25, t=25, b=20),
+            height=285,
+            annotations=[
+                dict(
+                    text=f"<span style='color:{status_color};font-weight:700;font-size:12px;'>● {status_text}</span>",
+                    x=0.5,
+                    y=0.12,
+                    showarrow=False,
+                )
+            ]
+        )
+    )
 
     return fig
 
@@ -135,8 +212,18 @@ def create_trend_chart(
     mode: str = "bulanan",
 ) -> go.Figure:
     """
-    Membuat line/area chart tren realisasi.
+    Membuat area chart tren realisasi yang modern, mewah, dan responsif.
     """
+    if monthly_df.empty:
+        fig = go.Figure()
+        fig.update_layout(
+            **_merged_layout(
+                annotations=[dict(text="Tidak ada data tren", showarrow=False, font=dict(size=14, color=COLORS["text_muted"]))],
+                height=340
+            )
+        )
+        return fig
+
     if mode == "bulanan":
         x_col = "nama_bulan"
         y_col = "realisasi_kumulatif"
@@ -154,18 +241,23 @@ def create_trend_chart(
 
     fig = go.Figure()
 
-    # Area fill
+    # Glowing Area Fill + Smooth Spline Line
     fig.add_trace(go.Scatter(
         x=monthly_df[x_col],
         y=monthly_df[y_col],
         fill="tozeroy",
-        fillcolor="rgba(46,204,113,0.15)",
-        line=dict(color=COLORS["realisasi"], width=3),
+        fillcolor="rgba(0, 230, 118, 0.14)",
+        line=dict(color="#00E676", width=3.5, shape="spline", smoothing=1.3),
         mode="lines+markers",
-        marker=dict(size=8, color=COLORS["realisasi"]),
+        marker=dict(
+            size=9,
+            color="#00E676",
+            line=dict(color="#FFFFFF", width=2),
+            symbol="circle"
+        ),
         name="Realisasi Kumulatif",
-        hovertemplate="<b>%{x}</b><br>Realisasi: %{customdata}<extra></extra>",
         customdata=[format_rupiah(v) for v in monthly_df[y_col]],
+        hovertemplate="📅 <b>%{x}</b><br>💰 Realisasi: <b>%{customdata}</b><extra></extra>",
     ))
 
     fig.update_layout(
@@ -176,15 +268,16 @@ def create_trend_chart(
                 categoryarray=x_order,
                 showgrid=False,
                 title="",
+                tickfont=dict(size=11, color=COLORS["text"]),
             ),
             yaxis=dict(
                 showgrid=True,
-                gridcolor="rgba(255,255,255,0.05)",
+                gridcolor="rgba(255,255,255,0.06)",
                 title="",
-                tickformat=",.0f",
+                tickfont=dict(size=10.5, color=COLORS["text_muted"]),
             ),
-            margin=dict(l=20, r=20, t=20, b=20),
-            height=360,
+            margin=dict(l=25, r=25, t=25, b=25),
+            height=340,
             showlegend=False,
         )
     )
