@@ -317,7 +317,7 @@ def create_belanja_comparison(belanja_df: pd.DataFrame, max_items: Optional[int]
         marker_color=COLORS["pagu"],
         marker_line=dict(width=0),
         orientation="h",
-        customdata=list(zip(original_labels, [format_rupiah(v) for v in df_plot["pagu_anggaran"]])),
+        customdata=[[name, format_rupiah(v)] for name, v in zip(original_labels, df_plot["pagu_anggaran"])],
         hovertemplate="<b>%{customdata[0]}</b><br>Pagu: <b>%{customdata[1]}</b><extra></extra>",
     ))
 
@@ -333,7 +333,7 @@ def create_belanja_comparison(belanja_df: pd.DataFrame, max_items: Optional[int]
         textposition="outside",
         textfont=dict(size=11, color=COLORS["text"]),
         cliponaxis=False,
-        customdata=list(zip(original_labels, [format_rupiah(v) for v in df_plot["realisasi"]], [f"{p:.1f}%" for p in df_plot["persentase"]])),
+        customdata=[[name, format_rupiah(v), f"{p:.1f}%"] for name, v, p in zip(original_labels, df_plot["realisasi"], df_plot["persentase"])],
         hovertemplate="<b>%{customdata[0]}</b><br>Realisasi: <b>%{customdata[1]}</b> (%{customdata[2]})<extra></extra>",
     ))
 
@@ -393,7 +393,7 @@ def create_pj_comparison(pj_df: pd.DataFrame) -> go.Figure:
         name="Pagu Anggaran",
         marker_color=COLORS["pagu"],
         orientation="h",
-        customdata=list(zip(original_labels, [format_rupiah(v) for v in pj_df["pagu_anggaran"]])),
+        customdata=[[name, format_rupiah(v)] for name, v in zip(original_labels, pj_df["pagu_anggaran"])],
         hovertemplate="<b>%{customdata[0]}</b><br>Pagu: <b>%{customdata[1]}</b><extra></extra>",
     ))
 
@@ -408,7 +408,7 @@ def create_pj_comparison(pj_df: pd.DataFrame) -> go.Figure:
         textposition="outside",
         textfont=dict(size=11, color=COLORS["text"]),
         cliponaxis=False,
-        customdata=list(zip(original_labels, [format_rupiah(v) for v in pj_df["realisasi"]], [f"{p:.1f}%" for p in pj_df["persentase"]])),
+        customdata=[[name, format_rupiah(v), f"{p:.1f}%"] for name, v, p in zip(original_labels, pj_df["realisasi"], pj_df["persentase"])],
         hovertemplate="<b>%{customdata[0]}</b><br>Realisasi: <b>%{customdata[1]}</b> (%{customdata[2]})<extra></extra>",
     ))
 
@@ -511,7 +511,7 @@ def create_donut_chart(composition_df: pd.DataFrame, max_slices: int = 5) -> go.
         textposition="inside",
         textfont=dict(size=11, color="#FFFFFF", family="Inter, sans-serif"),
         insidetextorientation="horizontal",
-        customdata=list(zip(plot_df["jenis_belanja"], [format_rupiah(v) for v in plot_df["realisasi"]])),
+        customdata=[[name, format_rupiah(v)] for name, v in zip(plot_df["jenis_belanja"], plot_df["realisasi"])],
         hovertemplate=(
             "<b>%{customdata[0]}</b><br>"
             "💰 Realisasi: <b>%{customdata[1]}</b><br>"
