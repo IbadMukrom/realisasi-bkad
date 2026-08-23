@@ -192,38 +192,60 @@ def create_trend_chart(
     return fig
 
 
-def create_belanja_comparison(belanja_df: pd.DataFrame) -> go.Figure:
+def create_belanja_comparison(belanja_df: pd.DataFrame, max_items: Optional[int] = None) -> go.Figure:
     """
     Membuat grouped bar chart perbandingan pagu vs realisasi per jenis belanja.
     """
+    if belanja_df.empty:
+        fig = go.Figure()
+        fig.update_layout(
+            **_merged_layout(
+                annotations=[dict(text="Tidak ada data belanja", showarrow=False, font=dict(size=14, color=COLORS["text_muted"]))],
+                height=300,
+            )
+        )
+        return fig
+
+    df_plot = belanja_df.copy()
+    if max_items and len(df_plot) > max_items:
+        df_plot = df_plot.iloc[:max_items]
+
+    # Wrap long labels untuk Y-axis
+    wrapped_labels = [_wrap_label(lbl, width=32) for lbl in df_plot["jenis_belanja"]]
+    original_labels = df_plot["jenis_belanja"].tolist()
+
     fig = go.Figure()
 
     # Pagu
     fig.add_trace(go.Bar(
-        y=belanja_df["jenis_belanja"],
-        x=belanja_df["pagu_anggaran"],
+        y=wrapped_labels,
+        x=df_plot["pagu_anggaran"],
         name="Pagu Anggaran",
         marker_color=COLORS["pagu"],
+        marker_line=dict(width=0),
         orientation="h",
-        text=[format_rupiah(v) for v in belanja_df["pagu_anggaran"]],
-        textposition="none",
-        hovertemplate="<b>%{y}</b><br>Pagu: %{customdata}<extra></extra>",
-        customdata=[format_rupiah(v) for v in belanja_df["pagu_anggaran"]],
+        customdata=list(zip(original_labels, [format_rupiah(v) for v in df_plot["pagu_anggaran"]])),
+        hovertemplate="<b>%{customdata[0]}</b><br>Pagu: <b>%{customdata[1]}</b><extra></extra>",
     ))
 
     # Realisasi
     fig.add_trace(go.Bar(
-        y=belanja_df["jenis_belanja"],
-        x=belanja_df["realisasi"],
+        y=wrapped_labels,
+        x=df_plot["realisasi"],
         name="Realisasi",
         marker_color=COLORS["realisasi"],
+        marker_line=dict(width=0),
         orientation="h",
-        text=[f"{p:.1f}%" for p in belanja_df["persentase"]],
+        text=[f" {p:.1f}%" for p in df_plot["persentase"]],
         textposition="outside",
         textfont=dict(size=11, color=COLORS["text"]),
-        hovertemplate="<b>%{y}</b><br>Realisasi: %{customdata}<extra></extra>",
-        customdata=[format_rupiah(v) for v in belanja_df["realisasi"]],
+        cliponaxis=False,
+        customdata=list(zip(original_labels, [format_rupiah(v) for v in df_plot["realisasi"]], [f"{p:.1f}%" for p in df_plot["persentase"]])),
+        hovertemplate="<b>%{customdata[0]}</b><br>Realisasi: <b>%{customdata[1]}</b> (%{customdata[2]})<extra></extra>",
     ))
+
+    row_height = 46
+    total_height = max(340, len(df_plot) * row_height + 90)
 
     fig.update_layout(
         **_merged_layout(
@@ -236,18 +258,22 @@ def create_belanja_comparison(belanja_df: pd.DataFrame) -> go.Figure:
                 x=1,
             ),
             barmode="group",
-            margin=dict(l=20, r=50, t=30, b=20),
+            bargap=0.25,
+            bargroupgap=0.1,
+            margin=dict(l=220, r=50, t=35, b=25),
             xaxis=dict(
                 showgrid=True,
-                gridcolor="rgba(255,255,255,0.05)",
+                gridcolor="rgba(255,255,255,0.06)",
                 title="",
                 tickformat=",.0f",
+                tickfont=dict(size=10, color=COLORS["text_muted"]),
             ),
             yaxis=dict(
                 showgrid=False,
                 autorange="reversed",
+                tickfont=dict(size=10.5, color=COLORS["text"]),
             ),
-            height=max(360, len(belanja_df) * 45 + 80),
+            height=total_height,
         )
     )
 
@@ -258,31 +284,39 @@ def create_pj_comparison(pj_df: pd.DataFrame) -> go.Figure:
     """
     Membuat horizontal bar chart perbandingan Pagu vs Realisasi per Bidang Penanggung Jawab.
     """
+    if pj_df.empty:
+        fig = go.Figure()
+        return fig
+
+    wrapped_labels = [_wrap_label(lbl, width=30) for lbl in pj_df["penanggungjawab"]]
+    original_labels = pj_df["penanggungjawab"].tolist()
+
     fig = go.Figure()
 
     # Pagu
     fig.add_trace(go.Bar(
-        y=pj_df["penanggungjawab"],
+        y=wrapped_labels,
         x=pj_df["pagu_anggaran"],
         name="Pagu Anggaran",
         marker_color=COLORS["pagu"],
         orientation="h",
-        hovertemplate="<b>%{y}</b><br>Pagu: %{customdata}<extra></extra>",
-        customdata=[format_rupiah(v) for v in pj_df["pagu_anggaran"]],
+        customdata=list(zip(original_labels, [format_rupiah(v) for v in pj_df["pagu_anggaran"]])),
+        hovertemplate="<b>%{customdata[0]}</b><br>Pagu: <b>%{customdata[1]}</b><extra></extra>",
     ))
 
     # Realisasi
     fig.add_trace(go.Bar(
-        y=pj_df["penanggungjawab"],
+        y=wrapped_labels,
         x=pj_df["realisasi"],
         name="Realisasi",
         marker_color=COLORS["realisasi"],
         orientation="h",
-        text=[f"{p:.1f}%" for p in pj_df["persentase"]],
+        text=[f" {p:.1f}%" for p in pj_df["persentase"]],
         textposition="outside",
         textfont=dict(size=11, color=COLORS["text"]),
-        hovertemplate="<b>%{y}</b><br>Realisasi: %{customdata}<extra></extra>",
-        customdata=[format_rupiah(v) for v in pj_df["realisasi"]],
+        cliponaxis=False,
+        customdata=list(zip(original_labels, [format_rupiah(v) for v in pj_df["realisasi"]], [f"{p:.1f}%" for p in pj_df["persentase"]])),
+        hovertemplate="<b>%{customdata[0]}</b><br>Realisasi: <b>%{customdata[1]}</b> (%{customdata[2]})<extra></extra>",
     ))
 
     fig.update_layout(
@@ -296,33 +330,100 @@ def create_pj_comparison(pj_df: pd.DataFrame) -> go.Figure:
                 x=1,
             ),
             barmode="group",
-            margin=dict(l=20, r=50, t=30, b=20),
-            height=max(300, len(pj_df) * 50 + 80),
-            yaxis=dict(autorange="reversed"),
+            bargap=0.25,
+            bargroupgap=0.1,
+            margin=dict(l=190, r=50, t=35, b=20),
+            height=max(300, len(pj_df) * 48 + 80),
+            yaxis=dict(autorange="reversed", tickfont=dict(size=11, color=COLORS["text"])),
+            xaxis=dict(
+                showgrid=True,
+                gridcolor="rgba(255,255,255,0.06)",
+                title="",
+                tickformat=",.0f",
+                tickfont=dict(size=10, color=COLORS["text_muted"]),
+            ),
         )
     )
 
     return fig
 
 
-def create_donut_chart(composition_df: pd.DataFrame) -> go.Figure:
+def create_donut_chart(composition_df: pd.DataFrame, max_slices: int = 5) -> go.Figure:
     """
-    Membuat donut chart komposisi realisasi per jenis belanja.
+    Membuat donut chart komposisi realisasi per jenis belanja yang rapi dan elegan.
+    Otomatis menggabungkan slice kecil ke 'Lainnya' agar tidak tumpang tindih.
     """
+    if composition_df.empty or composition_df["realisasi"].sum() == 0:
+        fig = go.Figure()
+        fig.update_layout(
+            **_merged_layout(
+                annotations=[dict(text="Tidak ada data realisasi", showarrow=False, font=dict(size=14, color=COLORS["text_muted"]))],
+                height=380,
+            )
+        )
+        return fig
+
+    df_comp = composition_df.copy().sort_values("realisasi", ascending=False)
+    total_realisasi = df_comp["realisasi"].sum()
+
+    # Smart grouping untuk mencegah label bertabrakan jika slice terlalu banyak
+    if len(df_comp) > max_slices:
+        top_df = df_comp.iloc[:max_slices].copy()
+        other_realisasi = df_comp.iloc[max_slices:]["realisasi"].sum()
+        other_count = len(df_comp) - max_slices
+        other_row = pd.DataFrame([{
+            "jenis_belanja": f"Lainnya ({other_count} Sub-Kegiatan)",
+            "realisasi": other_realisasi,
+            "persentase_komposisi": round(other_realisasi / total_realisasi * 100, 2)
+        }])
+        plot_df = pd.concat([top_df, other_row], ignore_index=True)
+    else:
+        plot_df = df_comp
+
+    # Format ringkas total realisasi untuk center text
+    if total_realisasi >= 1e12:
+        total_str = f"Rp {total_realisasi / 1e12:.2f} T"
+    elif total_realisasi >= 1e9:
+        total_str = f"Rp {total_realisasi / 1e9:.2f} M"
+    elif total_realisasi >= 1e6:
+        total_str = f"Rp {total_realisasi / 1e6:.2f} Jt"
+    else:
+        total_str = format_rupiah(total_realisasi)
+
+    # Truncate label untuk legend
+    clean_labels = []
+    for lbl in plot_df["jenis_belanja"]:
+        if len(lbl) > 28:
+            clean_labels.append(lbl[:26] + "...")
+        else:
+            clean_labels.append(lbl)
+
+    palette = [
+        "#00E676", "#29B6F6", "#FFCA28", "#AB47BC", "#FF5252",
+        "#26A69A", "#FFA726", "#42A5F5", "#EC407A", "#64748B"
+    ]
+    colors = palette[:len(plot_df)]
+    if "Lainnya" in plot_df.iloc[-1]["jenis_belanja"]:
+        colors[-1] = "#64748B"
+
     fig = go.Figure(go.Pie(
-        labels=composition_df["jenis_belanja"],
-        values=composition_df["realisasi"],
-        hole=0.55,
-        marker=dict(colors=COLOR_SEQUENCE[:len(composition_df)]),
-        textinfo="percent+label",
-        textposition="outside",
-        textfont=dict(size=11, color=COLORS["text"]),
-        hovertemplate=(
-            "<b>%{label}</b><br>"
-            "Realisasi: %{customdata}<br>"
-            "Proporsi: %{percent}<extra></extra>"
+        labels=clean_labels,
+        values=plot_df["realisasi"],
+        hole=0.62,
+        marker=dict(
+            colors=colors,
+            line=dict(color="#0E1117", width=2)
         ),
-        customdata=[format_rupiah(v) for v in composition_df["realisasi"]],
+        textinfo="percent",
+        textposition="inside",
+        textfont=dict(size=11, color="#FFFFFF", family="Inter, sans-serif"),
+        insidetextorientation="horizontal",
+        customdata=list(zip(plot_df["jenis_belanja"], [format_rupiah(v) for v in plot_df["realisasi"]])),
+        hovertemplate=(
+            "<b>%{customdata[0]}</b><br>"
+            "💰 Realisasi: <b>%{customdata[1]}</b><br>"
+            "📊 Porsi: <b>%{percent}</b><extra></extra>"
+        ),
     ))
 
     fig.update_layout(
@@ -331,19 +432,18 @@ def create_donut_chart(composition_df: pd.DataFrame) -> go.Figure:
             legend=dict(
                 orientation="h",
                 yanchor="top",
-                y=-0.1,
+                y=-0.08,
                 xanchor="center",
                 x=0.5,
-                font=dict(size=10),
+                font=dict(size=10, color=COLORS["text_muted"]),
             ),
-            margin=dict(l=20, r=20, t=20, b=60),
-            height=380,
+            margin=dict(l=10, r=10, t=20, b=80),
+            height=430,
             showlegend=True,
             annotations=[
                 dict(
-                    text="Realisasi",
+                    text=f"<b style='color:#F8FAFC;font-size:15px;'>{total_str}</b><br><span style='color:#94A3B8;font-size:11px;'>Total Realisasi</span>",
                     x=0.5, y=0.5,
-                    font=dict(size=14, color=COLORS["text_muted"]),
                     showarrow=False,
                 )
             ],

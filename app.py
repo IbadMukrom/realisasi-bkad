@@ -1028,18 +1028,35 @@ elif page == "📊 Dashboard":
             st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
 
     # ── Belanja Comparison + Composition ──
-    col_bar, col_donut = st.columns([2, 1])
+    col_bar, col_donut = st.columns([1.55, 1.45])
 
     with col_bar:
-        st.markdown('<div class="section-header">📊 Perbandingan per Jenis Belanja</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">📊 Perbandingan per Sub-Kegiatan</div>', unsafe_allow_html=True)
         belanja_comparison = get_belanja_comparison(df_filtered)
-        bar_fig = create_belanja_comparison(belanja_comparison)
+
+        if not belanja_comparison.empty and len(belanja_comparison) > 10:
+            bar_limit_opt = st.selectbox(
+                "Tampilkan Sub-Kegiatan:",
+                options=["Top 10 Capaian Tertinggi", "Top 15 Capaian Tertinggi", "Semua Sub-Kegiatan"],
+                index=0,
+                key="bar_subkegiatan_limit"
+            )
+            if "10" in bar_limit_opt:
+                bar_limit = 10
+            elif "15" in bar_limit_opt:
+                bar_limit = 15
+            else:
+                bar_limit = None
+        else:
+            bar_limit = None
+
+        bar_fig = create_belanja_comparison(belanja_comparison, max_items=bar_limit)
         st.plotly_chart(bar_fig, use_container_width=True, config={"displayModeBar": False})
 
     with col_donut:
-        st.markdown('<div class="section-header">🥧 Komposisi Belanja</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">🥧 Komposisi Realisasi Belanja</div>', unsafe_allow_html=True)
         composition = get_belanja_composition(df_filtered)
-        donut_fig = create_donut_chart(composition)
+        donut_fig = create_donut_chart(composition, max_slices=5)
         st.plotly_chart(donut_fig, use_container_width=True, config={"displayModeBar": False})
 
     # ── Heatmap ──
