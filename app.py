@@ -1092,11 +1092,14 @@ elif page == "📊 Dashboard":
             index=len(tahun_options) - 1,
         )
 
+        def reset_dashboard_filters():
+            st.session_state["dashboard_filter_pj"] = []
+            st.session_state["dashboard_filter_belanja"] = []
+
         pj_options = safe_sorted_options(df["penanggungjawab"]) if "penanggungjawab" in df.columns else []
         selected_pj = st.multiselect(
             "🏢 Bidang Penanggung Jawab",
             options=pj_options,
-            default=[],
             placeholder="Semua Bidang",
             key="dashboard_filter_pj",
         ) if pj_options else []
@@ -1105,16 +1108,17 @@ elif page == "📊 Dashboard":
         selected_belanja = st.multiselect(
             "💰 Sub-Kegiatan / Jenis Belanja",
             options=belanja_options,
-            default=[],
             placeholder="Semua Sub-Kegiatan",
             key="dashboard_filter_belanja",
         )
 
         if selected_pj or selected_belanja:
-            if st.button("🔄 Reset Filter ke Default", use_container_width=True, help="Kembalikan semua filter ke Semua Bidang & Sub-Kegiatan"):
-                st.session_state["dashboard_filter_pj"] = []
-                st.session_state["dashboard_filter_belanja"] = []
-                st.rerun()
+            st.button(
+                "🔄 Reset Filter ke Default",
+                use_container_width=True,
+                on_click=reset_dashboard_filters,
+                help="Kembalikan semua filter ke Semua Bidang & Sub-Kegiatan"
+            )
 
         st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
 
