@@ -1699,37 +1699,58 @@ elif page == "📖 Panduan":
     # ──────────────────────────────────────────────────────────────────────
     # SECTION 2: DASHBOARD
     # ──────────────────────────────────────────────────────────────────────
-    st.markdown('<div class="section-header" id="2-halaman-dashboard">2️⃣ Halaman Dashboard</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header" id="2-halaman-dashboard">2️⃣ Halaman Dashboard (Executive View)</div>', unsafe_allow_html=True)
 
-    with st.expander("🔍 Filter Sidebar", expanded=True):
+    with st.expander("🔍 Filter Sidebar & Tombol Reset 1-Klik", expanded=True):
         st.markdown("""
-        Sidebar sebelah kiri menyediakan 3 filter utama:
-        - 📅 **Tahun Anggaran** — Memilih tahun realisasi (misal: 2025)
-        - 🏢 **Bidang Penanggung Jawab** — Memilih 1 atau beberapa bidang (Sekretariat, Bidang Anggaran, Bidang Perbendaharaan, Bidang Akuntansi & Pelaporan, Bidang Pengelolaan BMD)
-        - 💰 **Sub-Kegiatan / Uraian** — Memilih sub-kegiatan tertentu
+        Sidebar sebelah kiri menyediakan filter fleksibel untuk membedah data anggaran:
+        - 📅 **Tahun Anggaran** — Memilih tahun realisasi yang aktif (misal: 2026 atau 2025).
+        - 🏢 **Bidang Penanggung Jawab** — Memilih 1 atau beberapa bidang tertentu (Sekretariat, Bidang Anggaran, Bidang Perbendaharaan, Akuntansi, atau BMD).
+        - 💰 **Sub-Kegiatan / Jenis Belanja** — Memilih sub-kegiatan tertentu untuk analisis spesifik.
+        - 🔄 **Tombol Reset Filter ke Default** — Tombol cerdas yang otomatis muncul ketika ada filter aktif; mengembalikan seluruh filter ke kondisi awal hanya dalam 1 klik.
         """)
 
-    with st.expander("📊 Kartu Ringkasan (Metric Cards)", expanded=False):
+    with st.expander("💎 Kartu KPI Utama & Indikator Laju Serapan", expanded=False):
         st.markdown("""
-        Menampilkan 4 indikator utama:
-        - **💰 Total Pagu Anggaran** — Ditulis dalam format Rupiah penuh (misal: `Rp 366.999.332.784`)
-        - **✅ Total Realisasi** — Ditulis dalam format Rupiah penuh (misal: `Rp 105.107.575.969`)
-        - **📉 Sisa Anggaran** — Pagu dikurangi realisasi
-        - **📊 Persentase Realisasi** — Persentase capaian + indikator status (🟢 Baik ≥80%, 🟡 Cukup 50-79%, 🔴 Rendah <50%)
+        Menampilkan 4 kartu ringkasan eksekutif dengan efek *glassmorphism* dan *mini progress track*:
+        - **💰 Total Pagu Anggaran** — Nominal alokasi pagu tahunan dalam format Rupiah lengkap.
+        - **✅ Realisasi Kumulatif** — Total serapan riil disertai **Badge Laju Serapan Berjalan**:
+          - `⚡ On-Track`: Serapan berada di atas atau sama dengan target proporsional bulan berjalan.
+          - `⏱️ Cukup`: Serapan berada sedikit di bawah target (selisih ≤ 10%).
+          - `⚠️ Terlambat`: Serapan tertinggal lebih dari 10% dari target ideal bulanan.
+        - **📉 Sisa Pagu Anggaran** — Sisa alokasi dana beserta persentase sisa anggaran.
+        - **📊 Persentase Capaian** — Persentase capaian kumulatif posisi bulan berjalan beserta target ideal tahunan.
         """)
 
-    with st.expander("🏢 Grafik per Bidang & Sub-Kegiatan", expanded=False):
+    with st.expander("📊 Tab 1: Ringkasan & Performa Bidang", expanded=False):
         st.markdown("""
-        - **Capaian per Bidang Penanggung Jawab** — Horizontal bar chart perbandingan Pagu vs Realisasi per bidang.
-        - **Perbandingan per Sub-Kegiatan** — Horizontal bar chart perbandingan Pagu vs Realisasi 79 sub-kegiatan BKAD.
-        - **Donut Chart & Heatmap** — Proporsi realisasi dan peta warna intensitas realisasi bulanan.
+        - 💡 **Executive Summary & Insight Naratif Otomatis** — Ringkasan analisis cerdas berbasis data mengenai sub-kegiatan dengan capaian tertinggi/terendah serta performa bidang terdepan.
+        - 🎯 **Capaian Realisasi Total (Gauge)** — Visualisasi setengah lingkaran penyerapan anggaran dengan badge status (🟢 Baik, 🟡 Cukup, 🔴 Perlu Perhatian) serta keterangan deviasi laju di bawahnya.
+        - 🥧 **Komposisi Realisasi Belanja (Donut)** — Proporsi pembagian anggaran dengan legenda vertikal di sisi kanan dan ringkasan total serapan di tengah lingkaran donat.
+        - 🏢 **Ranking Leaderboard per Bidang** — Diagram batang horizontal yang otomatis mengurutkan bidang dari **capaian tertinggi ke terendah** dengan indikator warna persentase dinamis (Hijau/Kuning/Merah).
         """)
 
-    with st.expander("📄 Unduh Laporan Resmi (PDF & Excel)", expanded=False):
+    with st.expander("📈 Tab 2: Tren, Komparasi & Heatmap", expanded=False):
         st.markdown("""
-        Di bagian paling bawah halaman Dashboard, Anda dapat mengunduh laporan realisasi resmi dalam 2 format:
-        - **📄 Download Laporan PDF** — Dokumen PDF terformat resmi (KOP BKAD, Ringkasan Eksekutif, dan Tabel Detail berformat Lanskap A4 siap cetak).
-        - **📊 Download Laporan Excel** — File Excel terformat lengkap dengan styling header, border, dan formula angka.
+        - 📈 **Tren Realisasi & Baseline Target (Bulanan & Triwulanan)**:
+          - **Garis Hijau Solid**: Akumulasi penyerapan riil bulan ke bulan.
+          - **Garis Putus-Putus Emas**: Target ideal kumulatif proporsional ($m/12 \times \text{Pagu}$).
+          - **Interactive Hover Card**: Arahkan kursor ke tiap bulan untuk melihat komparasi nominal realisasi riil vs target ideal dan status deviasi lajunya.
+        - 📊 **Perbandingan Serapan per Sub-Kegiatan** — Diagram batang horizontal dengan filter Top 10, Top 15, atau Semua Sub-Kegiatan beserta sumbu X berformat ringkas (Jt/M/T).
+        - 🗓️ **Heatmap Intensitas Realisasi Bulanan** — Peta intensitas warna untuk mendeteksi lonjakan belanja per bulan, baik berdasarkan Bidang maupun Sub-Kegiatan.
+        """)
+
+    with st.expander("📋 Tab 3: Rincian Sub-Kegiatan & Pusat Ekspor Laporan", expanded=False):
+        st.markdown("""
+        - 📋 **Tabel Detail Interaktif**:
+          - **Visual Progress Bar**: Kolom `% Capaian` divisualisasikan dengan bilah progres berwarna.
+          - **Status Serapan**: Penanda visual `🟢 Baik (≥80%)`, `🟡 Cukup (50–79%)`, dan `🔴 Rendah (<50%)`.
+          - **Counter Badges**: Ringkasan jumlah kegiatan yang masuk kategori Baik, Cukup, dan Rendah.
+          - **Pencarian & Filter Cepat**: Filter kategori capaian serta pencarian teks instan untuk kode rekening, nama sub-kegiatan, atau bidang.
+        - 📥 **Pusat Ekspor & Unduh Laporan**:
+          - **📊 Unduh Excel Formatted** — File Excel resmi terformat dengan styling header, border rapi, dan format angka.
+          - **📄 Unduh PDF Resmi** — Dokumen PDF resmi lanskap A4 dengan kop BKAD siap cetak untuk rapat pimpinan.
+          - **📥 Unduh CSV Ringkasan & CSV Mentah** — Untuk keperluan integrasi data atau olah data mandiri.
         """)
 
     st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
