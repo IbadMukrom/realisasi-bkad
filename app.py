@@ -400,6 +400,90 @@ st.markdown("""
         transform: translateY(-2px) !important;
         box-shadow: 0 8px 24px rgba(16, 185, 129, 0.45) !important;
     }
+
+    /* Executive Segmented Tabs Styling */
+    [data-baseweb="tab-list"] {
+        gap: 8px !important;
+        background: rgba(15, 23, 42, 0.65) !important;
+        padding: 6px 8px !important;
+        border-radius: 14px !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25) !important;
+        backdrop-filter: blur(12px) !important;
+        margin-top: 1rem !important;
+        margin-bottom: 1.5rem !important;
+    }
+    [data-baseweb="tab"] {
+        height: 44px !important;
+        border-radius: 10px !important;
+        padding: 8px 20px !important;
+        color: #94A3B8 !important;
+        font-size: 0.95rem !important;
+        font-weight: 600 !important;
+        border: 1px solid transparent !important;
+        background: transparent !important;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    [data-baseweb="tab"]:hover {
+        color: #F8FAFC !important;
+        background: rgba(255, 255, 255, 0.06) !important;
+    }
+    [data-baseweb="tab"][aria-selected="true"] {
+        background: linear-gradient(135deg, rgba(56, 189, 248, 0.18) 0%, rgba(14, 165, 233, 0.25) 100%) !important;
+        color: #38BDF8 !important;
+        border: 1px solid rgba(56, 189, 248, 0.45) !important;
+        box-shadow: 0 4px 16px rgba(14, 165, 233, 0.25) !important;
+    }
+    [data-baseweb="tab-highlight"] {
+        display: none !important;
+    }
+    [data-baseweb="tab-border"] {
+        display: none !important;
+    }
+
+    /* Executive Status Ribbon */
+    .executive-ribbon {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(30, 41, 59, 0.45);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        padding: 9px 18px;
+        margin-bottom: 1.2rem;
+        font-size: 0.86rem;
+        color: #94A3B8;
+        flex-wrap: wrap;
+        gap: 8px;
+        backdrop-filter: blur(10px);
+    }
+    .ribbon-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #E2E8F0;
+    }
+    .pulse-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #00E676;
+        box-shadow: 0 0 0 0 rgba(0, 230, 118, 0.7);
+        animation: pulse-green 2s infinite;
+    }
+    @keyframes pulse-green {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 230, 118, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(0, 230, 118, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 230, 118, 0); }
+    }
+    .ribbon-stats {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 0.82rem;
+        color: #94A3B8;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -1049,14 +1133,25 @@ elif page == "📊 Dashboard":
     summary = get_summary(df_filtered)
     latest_bln_name = NAMA_BULAN.get(summary.get("latest_bulan", 1), "")
 
-    # ── Executive Summary & Insight Card ──
-    insights = get_executive_insights(df_filtered, summary)
-    with st.expander("💡 Executive Summary & Insight Naratif Otomatis", expanded=True):
-        st.markdown("#### 📌 Ringkasan Eksekutif & Analisis Data")
-        for b in insights["bullets"]:
-            st.markdown(f"- {b}")
-
-    st.markdown("")
+    # ── Executive Status Ribbon ──
+    jml_bidang = df_filtered['penanggungjawab'].nunique() if 'penanggungjawab' in df_filtered.columns else 1
+    jml_subkeg = df_filtered['jenis_belanja'].nunique()
+    total_baris = len(df_filtered)
+    st.markdown(f"""
+    <div class="executive-ribbon">
+        <div class="ribbon-item">
+            <span class="pulse-dot"></span>
+            <span><b>Data Realisasi Terkoneksi & Mutakhir</b> • Posisi Bulan: <b>{latest_bln_name} {selected_tahun}</b></span>
+        </div>
+        <div class="ribbon-stats">
+            <span>🏛️ <b>{jml_bidang}</b> Bidang</span>
+            <span>•</span>
+            <span>💰 <b>{jml_subkeg}</b> Sub-Kegiatan</span>
+            <span>•</span>
+            <span>📋 <b>{total_baris:,}</b> Baris Data</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
     # ── Metrik Laju Serapan & Target Kumulatif ──
     curr_m = summary.get("latest_bulan", 1)
@@ -1174,17 +1269,55 @@ elif page == "📊 Dashboard":
 
     st.markdown("")
 
-    # ── Gauge + Trend ──
-    col_gauge, col_trend = st.columns([1, 2.5])
+    # ── Executive Segmented Tabs ──
+    tab_ringkasan, tab_tren, tab_detail = st.tabs([
+        "📊 Ringkasan & Performa Bidang",
+        "📈 Tren, Komparasi & Heatmap",
+        "📋 Rincian Sub-Kegiatan & Ekspor",
+    ])
 
-    with col_gauge:
-        st.markdown('<div class="section-header">🎯 Capaian Realisasi</div>', unsafe_allow_html=True)
-        gauge_fig = create_gauge_chart(summary["persentase"])
-        st.plotly_chart(gauge_fig, use_container_width=True, config={"displayModeBar": False}, key="chart_belanja_gauge")
+    # ═══════════════════════════════════════════════════════════════════════════
+    # TAB 1: RINGKASAN & PERFORMA BIDANG
+    # ═══════════════════════════════════════════════════════════════════════════
+    with tab_ringkasan:
+        # ── Executive Summary & Insight Card ──
+        insights = get_executive_insights(df_filtered, summary)
+        with st.expander("💡 Executive Summary & Insight Naratif Otomatis", expanded=True):
+            st.markdown("#### 📌 Ringkasan Eksekutif & Analisis Data")
+            for b in insights["bullets"]:
+                st.markdown(f"- {b}")
 
-    with col_trend:
-        st.markdown('<div class="section-header">📈 Tren Realisasi</div>', unsafe_allow_html=True)
-        trend_tab1, trend_tab2 = st.tabs(["📅 Bulanan", "📊 Triwulanan"])
+        st.markdown("")
+
+        # ── Gauge + Composition ──
+        col_gauge, col_donut = st.columns([1.1, 1.4])
+
+        with col_gauge:
+            st.markdown('<div class="section-header">🎯 Capaian Realisasi Total</div>', unsafe_allow_html=True)
+            gauge_fig = create_gauge_chart(summary["persentase"])
+            st.plotly_chart(gauge_fig, use_container_width=True, config={"displayModeBar": False}, key="chart_belanja_gauge")
+
+        with col_donut:
+            st.markdown('<div class="section-header">🥧 Komposisi Realisasi Belanja</div>', unsafe_allow_html=True)
+            composition = get_belanja_composition(df_filtered)
+            donut_fig = create_donut_chart(composition, max_slices=5)
+            st.plotly_chart(donut_fig, use_container_width=True, config={"displayModeBar": False}, key="chart_belanja_donut")
+
+        # ── Penanggung Jawab Comparison ──
+        if "penanggungjawab" in df_filtered.columns:
+            pj_comp = get_pj_comparison(df_filtered)
+            if not pj_comp.empty:
+                st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
+                st.markdown('<div class="section-header">🏢 Capaian Realisasi per Bidang Penanggung Jawab</div>', unsafe_allow_html=True)
+                pj_fig = create_pj_comparison(pj_comp)
+                st.plotly_chart(pj_fig, use_container_width=True, config={"displayModeBar": False}, key="chart_belanja_pj")
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # TAB 2: TREN, KOMPARASI & HEATMAP
+    # ═══════════════════════════════════════════════════════════════════════════
+    with tab_tren:
+        st.markdown('<div class="section-header">📈 Tren Realisasi Belanja</div>', unsafe_allow_html=True)
+        trend_tab1, trend_tab2 = st.tabs(["📅 Tren Bulanan", "📊 Tren Triwulanan"])
 
         with trend_tab1:
             monthly = get_monthly_trend(df_filtered)
@@ -1196,20 +1329,8 @@ elif page == "📊 Dashboard":
             trend_fig_q = create_trend_chart(quarterly, mode="triwulanan")
             st.plotly_chart(trend_fig_q, use_container_width=True, config={"displayModeBar": False}, key="chart_belanja_trend_quarterly")
 
-    # ── Penanggung Jawab Comparison ──
-    if "penanggungjawab" in df_filtered.columns:
-        pj_comp = get_pj_comparison(df_filtered)
-        if not pj_comp.empty:
-            st.markdown('<div class="section-header">🏢 Capaian Realisasi per Bidang Penanggung Jawab</div>', unsafe_allow_html=True)
-            pj_fig = create_pj_comparison(pj_comp)
-            st.plotly_chart(pj_fig, use_container_width=True, config={"displayModeBar": False}, key="chart_belanja_pj")
-            st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
-
-    # ── Belanja Comparison + Composition ──
-    col_bar, col_donut = st.columns([1.55, 1.45])
-
-    with col_bar:
-        st.markdown('<div class="section-header">📊 Perbandingan per Sub-Kegiatan</div>', unsafe_allow_html=True)
+        st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">📊 Perbandingan Serapan per Sub-Kegiatan</div>', unsafe_allow_html=True)
         belanja_comparison = get_belanja_comparison(df_filtered)
 
         if not belanja_comparison.empty and len(belanja_comparison) > 10:
@@ -1231,254 +1352,252 @@ elif page == "📊 Dashboard":
         bar_fig = create_belanja_comparison(belanja_comparison, max_items=bar_limit)
         st.plotly_chart(bar_fig, use_container_width=True, config={"displayModeBar": False}, key="chart_belanja_subkegiatan_bar")
 
-    with col_donut:
-        st.markdown('<div class="section-header">🥧 Komposisi Realisasi Belanja</div>', unsafe_allow_html=True)
-        composition = get_belanja_composition(df_filtered)
-        donut_fig = create_donut_chart(composition, max_slices=5)
-        st.plotly_chart(donut_fig, use_container_width=True, config={"displayModeBar": False}, key="chart_belanja_donut")
+        # ── Heatmap ──
+        st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">🗓️ Heatmap Intensitas Realisasi Bulanan</div>', unsafe_allow_html=True)
 
-    # ── Heatmap ──
-    st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-header">🗓️ Heatmap Intensitas Realisasi Bulanan</div>', unsafe_allow_html=True)
+        col_hm_opt1, col_hm_opt2 = st.columns([3, 2])
+        with col_hm_opt1:
+            hm_options = ["Sub-Kegiatan / Jenis Belanja"]
+            if "penanggungjawab" in df_filtered.columns and df_filtered["penanggungjawab"].nunique() > 1:
+                hm_options.append("Bidang Penanggung Jawab")
 
-    col_hm_opt1, col_hm_opt2 = st.columns([3, 2])
-    with col_hm_opt1:
-        hm_options = ["Sub-Kegiatan / Jenis Belanja"]
-        if "penanggungjawab" in df_filtered.columns and df_filtered["penanggungjawab"].nunique() > 1:
-            hm_options.append("Bidang Penanggung Jawab")
-
-        selected_hm_group = st.radio(
-            "Tampilkan Heatmap Berdasarkan:",
-            options=hm_options,
-            horizontal=True,
-            key="heatmap_group_by",
-        )
-
-    group_col = "penanggungjawab" if selected_hm_group == "Bidang Penanggung Jawab" else "jenis_belanja"
-
-    with col_hm_opt2:
-        if group_col == "jenis_belanja" and df_filtered["jenis_belanja"].nunique() > 15:
-            max_rows = st.selectbox(
-                "Jumlah Baris Sub-Kegiatan:",
-                options=["Semua", "Top 10 (Realisasi Tertinggi)", "Top 15", "Top 25"],
-                index=0,
-                key="heatmap_limit",
-            )
-            if max_rows == "Semua":
-                limit_val = None
-            elif "10" in max_rows:
-                limit_val = 10
-            elif "15" in max_rows:
-                limit_val = 15
-            elif "25" in max_rows:
-                limit_val = 25
-            else:
-                limit_val = None
-        else:
-            limit_val = None
-
-    heatmap_fig = create_heatmap_belanja_monthly(df_filtered, group_col=group_col, max_items=limit_val)
-    st.plotly_chart(heatmap_fig, use_container_width=True, config={"displayModeBar": False}, key="chart_belanja_heatmap")
-
-    # ── Detail Table ──
-    st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-header">📋 Tabel Detail Realisasi Sub-Kegiatan BKAD</div>', unsafe_allow_html=True)
-
-    group_cols = ["jenis_belanja"]
-    if "penanggungjawab" in df_filtered.columns:
-        group_cols.insert(0, "penanggungjawab")
-    if "kode_rekening" in df_filtered.columns:
-        group_cols.insert(0, "kode_rekening")
-
-    idx = df_filtered.groupby(group_cols, dropna=False)["bulan"].idxmax()
-    latest_detail = df_filtered.loc[idx].copy()
-
-    if latest_detail.empty:
-        st.info("ℹ️ Belum ada rincian data sub-kegiatan belanja.")
-    else:
-        real_col = "realisasi_kumulatif" if "realisasi_kumulatif" in latest_detail.columns else "realisasi"
-        pagu_num = pd.to_numeric(latest_detail["pagu_anggaran"], errors="coerce").fillna(0.0)
-        real_num = pd.to_numeric(latest_detail[real_col], errors="coerce").fillna(0.0)
-
-        latest_detail["pagu_anggaran"] = pagu_num
-        latest_detail[real_col] = real_num
-        latest_detail["sisa"] = pagu_num - real_num
-        pct_raw = real_num / pagu_num.replace(0, 1) * 100
-        latest_detail["persentase"] = pd.to_numeric(pct_raw, errors="coerce").fillna(0.0).round(2)
-
-        def assign_status(p):
-            if p >= 80.0:
-                return "🟢 Baik"
-            elif p >= 50.0:
-                return "🟡 Cukup"
-            else:
-                return "🔴 Rendah"
-
-        latest_detail["status_badge"] = latest_detail["persentase"].apply(assign_status)
-
-        # ── Controls: Search & Category Filter ──
-        col_search1, col_filter_cat = st.columns([1.8, 1.2])
-        with col_search1:
-            search_query = st.text_input(
-                "🔍 Cari Sub-Kegiatan / Kode Rekening / Bidang...",
-                placeholder="Ketik nama sub-kegiatan, kode rekening, atau bidang...",
-                key="dashboard_search_input",
-            ).strip().lower()
-
-        with col_filter_cat:
-            status_filter = st.selectbox(
-                "🎯 Filter Kategori Capaian:",
-                options=["Semua Status", "🟢 Capaian Baik (≥80%)", "🟡 Capaian Cukup (50–79%)", "🔴 Perlu Perhatian (<50%)"],
-                index=0,
-                key="table_status_filter",
+            selected_hm_group = st.radio(
+                "Tampilkan Heatmap Berdasarkan:",
+                options=hm_options,
+                horizontal=True,
+                key="heatmap_group_by",
             )
 
-        if search_query:
-            mask = latest_detail["jenis_belanja"].astype(str).str.lower().str.contains(search_query)
-            if "kode_rekening" in latest_detail.columns:
-                mask = mask | latest_detail["kode_rekening"].astype(str).str.lower().str.contains(search_query)
-            if "penanggungjawab" in latest_detail.columns:
-                mask = mask | latest_detail["penanggungjawab"].astype(str).str.lower().str.contains(search_query)
-            latest_detail = latest_detail[mask]
+        group_col = "penanggungjawab" if selected_hm_group == "Bidang Penanggung Jawab" else "jenis_belanja"
 
-        if "🟢" in status_filter:
-            latest_detail = latest_detail[latest_detail["persentase"] >= 80.0]
-        elif "🟡" in status_filter:
-            latest_detail = latest_detail[(latest_detail["persentase"] >= 50.0) & (latest_detail["persentase"] < 80.0)]
-        elif "🔴" in status_filter:
-            latest_detail = latest_detail[latest_detail["persentase"] < 50.0]
+        with col_hm_opt2:
+            if group_col == "jenis_belanja" and df_filtered["jenis_belanja"].nunique() > 15:
+                max_rows = st.selectbox(
+                    "Jumlah Baris Sub-Kegiatan:",
+                    options=["Semua", "Top 10 (Realisasi Tertinggi)", "Top 15", "Top 25"],
+                    index=0,
+                    key="heatmap_limit",
+                )
+                if max_rows == "Semua":
+                    limit_val = None
+                elif "10" in max_rows:
+                    limit_val = 10
+                elif "15" in max_rows:
+                    limit_val = 15
+                elif "25" in max_rows:
+                    limit_val = 25
+                else:
+                    limit_val = None
+            else:
+                limit_val = None
+
+        heatmap_fig = create_heatmap_belanja_monthly(df_filtered, group_col=group_col, max_items=limit_val)
+        st.plotly_chart(heatmap_fig, use_container_width=True, config={"displayModeBar": False}, key="chart_belanja_heatmap")
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # TAB 3: RINCIAN SUB-KEGIATAN & EKSPOR
+    # ═══════════════════════════════════════════════════════════════════════════
+    with tab_detail:
+        st.markdown('<div class="section-header">📋 Tabel Detail Realisasi Sub-Kegiatan BKAD</div>', unsafe_allow_html=True)
+
+        group_cols = ["jenis_belanja"]
+        if "penanggungjawab" in df_filtered.columns:
+            group_cols.insert(0, "penanggungjawab")
+        if "kode_rekening" in df_filtered.columns:
+            group_cols.insert(0, "kode_rekening")
+
+        idx = df_filtered.groupby(group_cols, dropna=False)["bulan"].idxmax()
+        latest_detail = df_filtered.loc[idx].copy()
 
         if latest_detail.empty:
-            st.info("ℹ️ Tidak ada sub-kegiatan yang sesuai dengan filter pencarian / kategori yang dipilih.")
+            st.info("ℹ️ Belum ada rincian data sub-kegiatan belanja.")
         else:
-            # Mini Counter Badges
-            total_items = len(latest_detail)
-            count_high = (latest_detail["persentase"] >= 80.0).sum()
-            count_mid = ((latest_detail["persentase"] >= 50.0) & (latest_detail["persentase"] < 80.0)).sum()
-            count_low = (latest_detail["persentase"] < 50.0).sum()
+            real_col = "realisasi_kumulatif" if "realisasi_kumulatif" in latest_detail.columns else "realisasi"
+            pagu_num = pd.to_numeric(latest_detail["pagu_anggaran"], errors="coerce").fillna(0.0)
+            real_num = pd.to_numeric(latest_detail[real_col], errors="coerce").fillna(0.0)
 
-            st.markdown(f"""
-            <div style="display: flex; gap: 0.6rem; align-items: center; margin-bottom: 0.8rem; font-size: 0.85rem; flex-wrap: wrap;">
-                <span style="background: rgba(255,255,255,0.06); padding: 3px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); color: #E2E8F0;">Menampilkan: <b>{total_items}</b> sub-kegiatan</span>
-                <span style="background: rgba(46,204,113,0.15); padding: 3px 10px; border-radius: 6px; border: 1px solid rgba(46,204,113,0.3); color: #2ECC71;">🟢 Baik: <b>{count_high}</b></span>
-                <span style="background: rgba(243,156,18,0.15); padding: 3px 10px; border-radius: 6px; border: 1px solid rgba(243,156,18,0.3); color: #F39C12;">🟡 Cukup: <b>{count_mid}</b></span>
-                <span style="background: rgba(231,76,60,0.15); padding: 3px 10px; border-radius: 6px; border: 1px solid rgba(231,76,60,0.3); color: #E74C3C;">🔴 Rendah: <b>{count_low}</b></span>
-            </div>
-            """, unsafe_allow_html=True)
+            latest_detail["pagu_anggaran"] = pagu_num
+            latest_detail[real_col] = real_num
+            latest_detail["sisa"] = pagu_num - real_num
+            pct_raw = real_num / pagu_num.replace(0, 1) * 100
+            latest_detail["persentase"] = pd.to_numeric(pct_raw, errors="coerce").fillna(0.0).round(2)
 
-            latest_detail = latest_detail.sort_values("pagu_anggaran", ascending=False)
+            def assign_status(p):
+                if p >= 80.0:
+                    return "🟢 Baik"
+                elif p >= 50.0:
+                    return "🟡 Cukup"
+                else:
+                    return "🔴 Rendah"
 
-            latest_detail["pagu_fmt"] = latest_detail["pagu_anggaran"].apply(format_rupiah)
-            latest_detail["realisasi_fmt"] = latest_detail[real_col].apply(format_rupiah)
-            latest_detail["sisa_fmt"] = latest_detail["sisa"].apply(format_rupiah)
+            latest_detail["status_badge"] = latest_detail["persentase"].apply(assign_status)
 
-            cols_to_show = []
-            col_rename = {}
+            # ── Controls: Search & Category Filter ──
+            col_search1, col_filter_cat = st.columns([1.8, 1.2])
+            with col_search1:
+                search_query = st.text_input(
+                    "🔍 Cari Sub-Kegiatan / Kode Rekening / Bidang...",
+                    placeholder="Ketik nama sub-kegiatan, kode rekening, atau bidang...",
+                    key="dashboard_search_input",
+                ).strip().lower()
 
-            if "kode_rekening" in latest_detail.columns:
-                cols_to_show.append("kode_rekening")
-                col_rename["kode_rekening"] = "Kode Rekening"
+            with col_filter_cat:
+                status_filter = st.selectbox(
+                    "🎯 Filter Kategori Capaian:",
+                    options=["Semua Status", "🟢 Capaian Baik (≥80%)", "🟡 Capaian Cukup (50–79%)", "🔴 Perlu Perhatian (<50%)"],
+                    index=0,
+                    key="table_status_filter",
+                )
 
-            if "penanggungjawab" in latest_detail.columns:
-                cols_to_show.append("penanggungjawab")
-                col_rename["penanggungjawab"] = "Penanggung Jawab"
+            if search_query:
+                mask = latest_detail["jenis_belanja"].astype(str).str.lower().str.contains(search_query)
+                if "kode_rekening" in latest_detail.columns:
+                    mask = mask | latest_detail["kode_rekening"].astype(str).str.lower().str.contains(search_query)
+                if "penanggungjawab" in latest_detail.columns:
+                    mask = mask | latest_detail["penanggungjawab"].astype(str).str.lower().str.contains(search_query)
+                latest_detail = latest_detail[mask]
 
-            cols_to_show.extend(["jenis_belanja", "pagu_fmt", "realisasi_fmt", "sisa_fmt", "persentase", "status_badge"])
-            col_rename.update({
-                "jenis_belanja": "Sub-Kegiatan / Uraian",
-                "pagu_fmt": "Pagu Anggaran",
-                "realisasi_fmt": "Realisasi (Kumulatif)",
-                "sisa_fmt": "Sisa Anggaran",
-                "persentase": "% Capaian",
-                "status_badge": "Status",
-            })
+            if "🟢" in status_filter:
+                latest_detail = latest_detail[latest_detail["persentase"] >= 80.0]
+            elif "🟡" in status_filter:
+                latest_detail = latest_detail[(latest_detail["persentase"] >= 50.0) & (latest_detail["persentase"] < 80.0)]
+            elif "🔴" in status_filter:
+                latest_detail = latest_detail[latest_detail["persentase"] < 50.0]
 
-            display_table = latest_detail[cols_to_show].rename(columns=col_rename)
+            if latest_detail.empty:
+                st.info("ℹ️ Tidak ada sub-kegiatan yang sesuai dengan filter pencarian / kategori yang dipilih.")
+            else:
+                # Mini Counter Badges
+                total_items = len(latest_detail)
+                count_high = (latest_detail["persentase"] >= 80.0).sum()
+                count_mid = ((latest_detail["persentase"] >= 50.0) & (latest_detail["persentase"] < 80.0)).sum()
+                count_low = (latest_detail["persentase"] < 50.0).sum()
 
-            max_cap = float(latest_detail["persentase"].max()) if not latest_detail.empty else 100.0
-            max_progress = max(100.0, max_cap)
+                st.markdown(f"""
+                <div style="display: flex; gap: 0.6rem; align-items: center; margin-bottom: 0.8rem; font-size: 0.85rem; flex-wrap: wrap;">
+                    <span style="background: rgba(255,255,255,0.06); padding: 3px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); color: #E2E8F0;">Menampilkan: <b>{total_items}</b> sub-kegiatan</span>
+                    <span style="background: rgba(46,204,113,0.15); padding: 3px 10px; border-radius: 6px; border: 1px solid rgba(46,204,113,0.3); color: #2ECC71;">🟢 Baik: <b>{count_high}</b></span>
+                    <span style="background: rgba(243,156,18,0.15); padding: 3px 10px; border-radius: 6px; border: 1px solid rgba(243,156,18,0.3); color: #F39C12;">🟡 Cukup: <b>{count_mid}</b></span>
+                    <span style="background: rgba(231,76,60,0.15); padding: 3px 10px; border-radius: 6px; border: 1px solid rgba(231,76,60,0.3); color: #E74C3C;">🔴 Rendah: <b>{count_low}</b></span>
+                </div>
+                """, unsafe_allow_html=True)
 
-            column_config = {
-                "Kode Rekening": st.column_config.TextColumn("Kode Rekening", width="small"),
-                "Penanggung Jawab": st.column_config.TextColumn("Penanggung Jawab", width="medium"),
-                "Sub-Kegiatan / Uraian": st.column_config.TextColumn("Sub-Kegiatan / Uraian", width="large"),
-                "Pagu Anggaran": st.column_config.TextColumn("Pagu Anggaran", width="medium"),
-                "Realisasi (Kumulatif)": st.column_config.TextColumn("Realisasi (Kumulatif)", width="medium"),
-                "Sisa Anggaran": st.column_config.TextColumn("Sisa Anggaran", width="medium"),
-                "% Capaian": st.column_config.ProgressColumn(
-                    "% Capaian",
-                    help="Visualisasi tingkat penyerapan anggaran kumulatif terhadap pagu",
-                    format="%.2f%%",
-                    min_value=0.0,
-                    max_value=max_progress,
-                    width="medium",
-                ),
-                "Status": st.column_config.TextColumn(
-                    "Status",
-                    help="Status serapan: 🟢 Baik (≥80%), 🟡 Cukup (50–79%), 🔴 Rendah (<50%)",
-                    width="small",
-                ),
-            }
+                latest_detail = latest_detail.sort_values("pagu_anggaran", ascending=False)
 
-            st.dataframe(
-                display_table,
-                column_config=column_config,
-                use_container_width=True,
-                hide_index=True,
-                height=min(480, len(display_table) * 38 + 55),
-            )
+                latest_detail["pagu_fmt"] = latest_detail["pagu_anggaran"].apply(format_rupiah)
+                latest_detail["realisasi_fmt"] = latest_detail[real_col].apply(format_rupiah)
+                latest_detail["sisa_fmt"] = latest_detail["sisa"].apply(format_rupiah)
 
-    # ── Download ──
-    st.markdown("")
-    col_dl1, col_dl2, col_dl3 = st.columns([1.5, 1.5, 1])
+                cols_to_show = []
+                col_rename = {}
 
-    with col_dl1:
-        try:
-            excel_report_bytes = generate_formatted_excel_report(df_filtered, summary, selected_tahun)
+                if "kode_rekening" in latest_detail.columns:
+                    cols_to_show.append("kode_rekening")
+                    col_rename["kode_rekening"] = "Kode Rekening"
+
+                if "penanggungjawab" in latest_detail.columns:
+                    cols_to_show.append("penanggungjawab")
+                    col_rename["penanggungjawab"] = "Penanggung Jawab"
+
+                cols_to_show.extend(["jenis_belanja", "pagu_fmt", "realisasi_fmt", "sisa_fmt", "persentase", "status_badge"])
+                col_rename.update({
+                    "jenis_belanja": "Sub-Kegiatan / Uraian",
+                    "pagu_fmt": "Pagu Anggaran",
+                    "realisasi_fmt": "Realisasi (Kumulatif)",
+                    "sisa_fmt": "Sisa Anggaran",
+                    "persentase": "% Capaian",
+                    "status_badge": "Status",
+                })
+
+                display_table = latest_detail[cols_to_show].rename(columns=col_rename)
+
+                max_cap = float(latest_detail["persentase"].max()) if not latest_detail.empty else 100.0
+                max_progress = max(100.0, max_cap)
+
+                column_config = {
+                    "Kode Rekening": st.column_config.TextColumn("Kode Rekening", width="small"),
+                    "Penanggung Jawab": st.column_config.TextColumn("Penanggung Jawab", width="medium"),
+                    "Sub-Kegiatan / Uraian": st.column_config.TextColumn("Sub-Kegiatan / Uraian", width="large"),
+                    "Pagu Anggaran": st.column_config.TextColumn("Pagu Anggaran", width="medium"),
+                    "Realisasi (Kumulatif)": st.column_config.TextColumn("Realisasi (Kumulatif)", width="medium"),
+                    "Sisa Anggaran": st.column_config.TextColumn("Sisa Anggaran", width="medium"),
+                    "% Capaian": st.column_config.ProgressColumn(
+                        "% Capaian",
+                        help="Visualisasi tingkat penyerapan anggaran kumulatif terhadap pagu",
+                        format="%.2f%%",
+                        min_value=0.0,
+                        max_value=max_progress,
+                        width="medium",
+                    ),
+                    "Status": st.column_config.TextColumn(
+                        "Status",
+                        help="Status serapan: 🟢 Baik (≥80%), 🟡 Cukup (50–79%), 🔴 Rendah (<50%)",
+                        width="small",
+                    ),
+                }
+
+                st.dataframe(
+                    display_table,
+                    column_config=column_config,
+                    use_container_width=True,
+                    hide_index=True,
+                    height=min(480, len(display_table) * 38 + 55),
+                )
+
+        # ── Pusat Unduh & Ekspor Laporan ──
+        st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">📥 Pusat Ekspor & Unduh Laporan</div>', unsafe_allow_html=True)
+
+        col_dl1, col_dl2, col_dl3, col_dl4 = st.columns(4)
+
+        with col_dl1:
+            try:
+                excel_report_bytes = generate_formatted_excel_report(df_filtered, summary, selected_tahun)
+                st.download_button(
+                    label="📊 Unduh Excel Formatted",
+                    data=excel_report_bytes,
+                    file_name=f"laporan_realisasi_bkad_{selected_tahun}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    type="primary",
+                    use_container_width=True,
+                )
+            except Exception as e:
+                st.error(f"❌ Gagal membuat Excel: {e}")
+
+        with col_dl2:
+            try:
+                pdf_report_bytes = generate_formatted_pdf_report(df_filtered, summary, selected_tahun)
+                st.download_button(
+                    label="📄 Unduh PDF Resmi",
+                    data=pdf_report_bytes,
+                    file_name=f"laporan_realisasi_bkad_{selected_tahun}.pdf",
+                    mime="application/pdf",
+                    type="primary",
+                    use_container_width=True,
+                )
+            except Exception as e:
+                st.error(f"❌ Gagal membuat PDF: {e}")
+
+        with col_dl3:
+            csv_summary = latest_detail.to_csv(index=False).encode("utf-8")
             st.download_button(
-                label="📊 Download Laporan Excel",
-                data=excel_report_bytes,
-                file_name=f"laporan_realisasi_bkad_{selected_tahun}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                type="primary",
+                label="📥 Unduh CSV Ringkasan",
+                data=csv_summary,
+                file_name=f"ringkasan_bkad_{selected_tahun}.csv",
+                mime="text/csv",
                 use_container_width=True,
             )
-        except Exception as e:
-            st.error(f"❌ Gagal membuat Laporan Excel: {e}")
 
-    with col_dl2:
-        try:
-            pdf_report_bytes = generate_formatted_pdf_report(df_filtered, summary, selected_tahun)
+        with col_dl4:
+            csv_data = df_filtered.to_csv(index=False).encode("utf-8")
             st.download_button(
-                label="📄 Download Laporan PDF",
-                data=pdf_report_bytes,
-                file_name=f"laporan_realisasi_bkad_{selected_tahun}.pdf",
-                mime="application/pdf",
-                type="primary",
+                label="📁 Unduh CSV Mentah",
+                data=csv_data,
+                file_name=f"realisasi_bkad_{selected_tahun}.csv",
+                mime="text/csv",
                 use_container_width=True,
             )
-        except Exception as e:
-            st.error(f"❌ Gagal membuat Laporan PDF: {e}")
-
-    with col_dl3:
-        csv_summary = latest_detail.to_csv(index=False).encode("utf-8")
-        st.download_button(
-            label="📥 Download Data CSV",
-            data=csv_summary,
-            file_name=f"ringkasan_bkad_{selected_tahun}.csv",
-            mime="text/csv",
-            use_container_width=True,
-        )
-
-    with col_dl3:
-        csv_data = df_filtered.to_csv(index=False).encode("utf-8")
-        st.download_button(
-            label="📥 Download Data Mentah (CSV)",
-            data=csv_data,
-            file_name=f"realisasi_bkad_{selected_tahun}.csv",
-            mime="text/csv",
-            use_container_width=True,
-        )
 
     st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
     st.caption(
