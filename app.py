@@ -1098,6 +1098,7 @@ elif page == "📊 Dashboard":
             options=pj_options,
             default=[],
             placeholder="Semua Bidang",
+            key="dashboard_filter_pj",
         ) if pj_options else []
 
         belanja_options = safe_sorted_options(df["jenis_belanja"])
@@ -1106,7 +1107,14 @@ elif page == "📊 Dashboard":
             options=belanja_options,
             default=[],
             placeholder="Semua Sub-Kegiatan",
+            key="dashboard_filter_belanja",
         )
+
+        if selected_pj or selected_belanja:
+            if st.button("🔄 Reset Filter ke Default", use_container_width=True, help="Kembalikan semua filter ke Semua Bidang & Sub-Kegiatan"):
+                st.session_state["dashboard_filter_pj"] = []
+                st.session_state["dashboard_filter_belanja"] = []
+                st.rerun()
 
         st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
 

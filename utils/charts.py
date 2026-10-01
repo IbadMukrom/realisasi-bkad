@@ -134,6 +134,18 @@ def format_rupiah_sumbu(value: float) -> str:
         return "0"
 
 
+def _generate_clean_ticks(max_val: float, num_ticks: int = 5) -> tuple[list[float], list[str]]:
+    """
+    Menghasilkan tickvals dan ticktext bersih untuk sumbu X dalam format Rupiah ringkas (Jt, M, T).
+    """
+    if max_val <= 0:
+        return [0.0], ["0"]
+    import numpy as np
+    ticks = np.linspace(0, max_val, num_ticks)
+    labels = [format_rupiah_sumbu(t) for t in ticks]
+    return ticks.tolist(), labels
+
+
 def create_gauge_chart(percentage: float, title: str = "Capaian Realisasi") -> go.Figure:
     """
     Membuat gauge chart persentase capaian realisasi yang modern & elegan.
@@ -375,6 +387,15 @@ def create_belanja_comparison(belanja_df: pd.DataFrame, max_items: Optional[int]
     wrapped_labels = [_wrap_label(lbl, width=32) for lbl in df_plot["jenis_belanja"]]
     original_labels = df_plot["jenis_belanja"].tolist()
 
+    # Pewarnaan dinamis untuk persentase capaian
+    text_colors = [
+        ("#00E676" if p >= 80.0 else ("#FFCA28" if p >= 50.0 else "#FF5252"))
+        for p in df_plot["persentase"]
+    ]
+
+    max_val = max(df_plot["pagu_anggaran"].max(), df_plot["realisasi"].max()) if not df_plot.empty else 0.0
+    tickvals, ticktext = _generate_clean_ticks(max_val, num_ticks=5)
+
     fig = go.Figure()
 
     # Pagu
@@ -407,7 +428,7 @@ def create_belanja_comparison(belanja_df: pd.DataFrame, max_items: Optional[int]
         orientation="h",
         text=[f" {p:.1f}%" for p in df_plot["persentase"]],
         textposition="outside",
-        textfont=dict(size=11, color=COLORS["text"]),
+        textfont=dict(size=11, color=text_colors),
         cliponaxis=False,
         hovertext=real_hover,
         hovertemplate="%{hovertext}<extra></extra>",
@@ -429,12 +450,13 @@ def create_belanja_comparison(belanja_df: pd.DataFrame, max_items: Optional[int]
             barmode="group",
             bargap=0.25,
             bargroupgap=0.1,
-            margin=dict(l=220, r=50, t=35, b=25),
+            margin=dict(l=210, r=50, t=35, b=25),
             xaxis=dict(
                 showgrid=True,
                 gridcolor="rgba(255,255,255,0.06)",
                 title="",
-                tickformat=",.0f",
+                tickvals=tickvals,
+                ticktext=ticktext,
                 tickfont=dict(size=10, color=COLORS["text_muted"]),
             ),
             yaxis=dict(
@@ -451,25 +473,37 @@ def create_belanja_comparison(belanja_df: pd.DataFrame, max_items: Optional[int]
 
 def create_pj_comparison(pj_df: pd.DataFrame) -> go.Figure:
     """
-    Membuat horizontal bar chart perbandingan Pagu vs Realisasi per Bidang Penanggung Jawab.
+    Membuat horizontal bar chart perbandingan Pagu vs Realisasi per Bidang Penanggung Jawab,
+    diurutkan berdasarkan capaian tertinggi (ranking leaderboard) dengan pewarnaan dinamis.
     """
     if pj_df.empty:
         fig = go.Figure()
         return fig
 
-    wrapped_labels = [_wrap_label(lbl, width=30) for lbl in pj_df["penanggungjawab"]]
-    original_labels = pj_df["penanggungjawab"].tolist()
+    # Otomatis urutkan dari capaian tertinggi ke terendah
+    df_plot = pj_df.sort_values("persentase", ascending=False).copy()
+
+    wrapped_labels = [_wrap_label(lbl, width=28) for lbl in df_plot["penanggungjawab"]]
+    original_labels = df_plot["penanggungjawab"].tolist()
+
+    text_colors = [
+        ("#00E676" if p >= 80.0 else ("#FFCA28" if p >= 50.0 else "#FF5252"))
+        for p in df_plot["persentase"]
+    ]
+
+    max_val = max(df_plot["pagu_anggaran"].max(), df_plot["realisasi"].max()) if not df_plot.empty else 0.0
+    tickvals, ticktext = _generate_clean_ticks(max_val, num_ticks=5)
 
     fig = go.Figure()
 
     # Pagu
     pagu_hover = [
         f"<b>{name}</b><br>Pagu Anggaran: <b>{format_rupiah(v)}</b>"
-        for name, v in zip(original_labels, pj_df["pagu_anggaran"])
+        for name, v in zip(original_labels, df_plot["pagu_anggaran"])
     ]
     fig.add_trace(go.Bar(
         y=wrapped_labels,
-        x=pj_df["pagu_anggaran"],
+        x=df_plot["pagu_anggaran"],
         name="Pagu Anggaran",
         marker_color=COLORS["pagu"],
         orientation="h",
@@ -480,17 +514,17 @@ def create_pj_comparison(pj_df: pd.DataFrame) -> go.Figure:
     # Realisasi
     real_hover = [
         f"<b>{name}</b><br>Realisasi: <b>{format_rupiah(v)}</b> ({p:.1f}%)"
-        for name, v, p in zip(original_labels, pj_df["realisasi"], pj_df["persentase"])
+        for name, v, p in zip(original_labels, df_plot["realisasi"], df_plot["persentase"])
     ]
     fig.add_trace(go.Bar(
         y=wrapped_labels,
-        x=pj_df["realisasi"],
+        x=df_plot["realisasi"],
         name="Realisasi",
         marker_color=COLORS["realisasi"],
         orientation="h",
-        text=[f" {p:.1f}%" for p in pj_df["persentase"]],
+        text=[f" {p:.1f}%" for p in df_plot["persentase"]],
         textposition="outside",
-        textfont=dict(size=11, color=COLORS["text"]),
+        textfont=dict(size=11, color=text_colors),
         cliponaxis=False,
         hovertext=real_hover,
         hovertemplate="%{hovertext}<extra></extra>",
@@ -509,14 +543,18 @@ def create_pj_comparison(pj_df: pd.DataFrame) -> go.Figure:
             barmode="group",
             bargap=0.25,
             bargroupgap=0.1,
-            margin=dict(l=190, r=50, t=35, b=20),
-            height=max(300, len(pj_df) * 48 + 80),
-            yaxis=dict(autorange="reversed", tickfont=dict(size=11, color=COLORS["text"])),
+            margin=dict(l=175, r=50, t=35, b=25),
+            height=max(300, len(df_plot) * 48 + 80),
+            yaxis=dict(
+                autorange="reversed",
+                tickfont=dict(size=11, color=COLORS["text"]),
+            ),
             xaxis=dict(
                 showgrid=True,
                 gridcolor="rgba(255,255,255,0.06)",
                 title="",
-                tickformat=",.0f",
+                tickvals=tickvals,
+                ticktext=ticktext,
                 tickfont=dict(size=10, color=COLORS["text_muted"]),
             ),
         )
