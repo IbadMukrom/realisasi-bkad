@@ -163,10 +163,10 @@ def create_gauge_chart(percentage: float, title: str = "Capaian Realisasi") -> g
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
         value=pct,
-        domain=dict(x=[0.06, 0.94], y=[0.18, 1.0]),
+        domain=dict(x=[0.05, 0.95], y=[0.05, 0.95]),
         number=dict(
             suffix="%",
-            font=dict(size=40, color="#FFFFFF", family="Inter, sans-serif"),
+            font=dict(size=44, color="#FFFFFF", family="Inter, sans-serif"),
         ),
         gauge=dict(
             axis=dict(
@@ -185,9 +185,9 @@ def create_gauge_chart(percentage: float, title: str = "Capaian Realisasi") -> g
             bgcolor="rgba(255,255,255,0.06)",
             borderwidth=0,
             steps=[
-                dict(range=[0, 50], color="rgba(255, 82, 82, 0.08)"),
-                dict(range=[50, 80], color="rgba(255, 202, 40, 0.08)"),
-                dict(range=[80, 100], color="rgba(0, 230, 118, 0.08)"),
+                dict(range=[0, 50], color="rgba(255, 82, 82, 0.10)"),
+                dict(range=[50, 80], color="rgba(255, 202, 40, 0.10)"),
+                dict(range=[80, 100], color="rgba(0, 230, 118, 0.10)"),
             ],
             threshold=dict(
                 line=dict(color="#FFFFFF", width=3),
@@ -199,16 +199,8 @@ def create_gauge_chart(percentage: float, title: str = "Capaian Realisasi") -> g
 
     fig.update_layout(
         **_merged_layout(
-            margin=dict(l=15, r=15, t=15, b=15),
-            height=330,
-            annotations=[
-                dict(
-                    text=f"<span style='color:{status_color};background:{status_bg};border:1px solid {status_border};padding:4px 14px;border-radius:20px;font-weight:700;font-size:12px;'>● {status_text}</span>",
-                    x=0.5,
-                    y=0.03,
-                    showarrow=False,
-                )
-            ]
+            margin=dict(l=15, r=15, t=10, b=10),
+            height=270,
         )
     )
 
@@ -556,8 +548,8 @@ def create_donut_chart(composition_df: pd.DataFrame, max_slices: int = 5) -> go.
                 x=0.58,
                 font=dict(size=10.5, color=COLORS["text_muted"]),
             ),
-            margin=dict(l=10, r=15, t=15, b=15),
-            height=330,
+            margin=dict(l=10, r=15, t=10, b=10),
+            height=300,
             showlegend=True,
             annotations=[
                 dict(

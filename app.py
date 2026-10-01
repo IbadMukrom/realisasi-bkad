@@ -1293,12 +1293,33 @@ elif page == "📊 Dashboard":
         col_gauge, col_donut = st.columns([1.1, 1.4])
 
         with col_gauge:
-            st.markdown('<div class="section-header">🎯 Capaian Realisasi Total</div>', unsafe_allow_html=True)
-            gauge_fig = create_gauge_chart(summary["persentase"])
+            pct_val = summary["persentase"]
+            if pct_val >= 80.0:
+                gauge_badge = '<span class="kpi-pill green">🟢 Baik (≥80%)</span>'
+            elif pct_val >= 50.0:
+                gauge_badge = '<span class="kpi-pill yellow">🟡 Cukup (50-79%)</span>'
+            else:
+                gauge_badge = '<span class="kpi-pill red">🔴 Perlu Perhatian (<50%)</span>'
+
+            st.markdown(f"""
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
+                <div class="section-header" style="margin-bottom:0;">🎯 Capaian Realisasi Total</div>
+                {gauge_badge}
+            </div>
+            """, unsafe_allow_html=True)
+            gauge_fig = create_gauge_chart(pct_val)
             st.plotly_chart(gauge_fig, use_container_width=True, config={"displayModeBar": False}, key="chart_belanja_gauge")
 
+            st.markdown(f"""
+            <div style="display: flex; justify-content: center; gap: 8px; margin-top: -6px; font-size: 0.82rem; color: #94A3B8;">
+                <span>Target Proporsional: <b>{target_ideal_pct:.0f}%</b></span>
+                <span>•</span>
+                <span>Laju: <b>{selisih_laju:+.1f}%</b></span>
+            </div>
+            """, unsafe_allow_html=True)
+
         with col_donut:
-            st.markdown('<div class="section-header">🥧 Komposisi Realisasi Belanja</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-header" style="margin-bottom:0.3rem;">🥧 Komposisi Realisasi Belanja</div>', unsafe_allow_html=True)
             composition = get_belanja_composition(df_filtered)
             donut_fig = create_donut_chart(composition, max_slices=5)
             st.plotly_chart(donut_fig, use_container_width=True, config={"displayModeBar": False}, key="chart_belanja_donut")
