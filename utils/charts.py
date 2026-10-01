@@ -606,9 +606,8 @@ def create_heatmap_belanja_monthly(
         )
         .reset_index()
     )
-    agg["persentase"] = (
-        agg["realisasi"] / agg["pagu_anggaran"].replace(0, float("nan")) * 100
-    ).fillna(0).round(1)
+    pct_raw = agg["realisasi"] / agg["pagu_anggaran"].replace(0, float("nan")) * 100
+    agg["persentase"] = pd.to_numeric(pct_raw, errors="coerce").fillna(0.0).round(1)
 
     pivot = agg.pivot(index=group_col, columns="bulan", values="persentase").fillna(0)
 

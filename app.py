@@ -4,9 +4,15 @@ Dashboard Visualisasi Realisasi Anggaran BKAD
 Aplikasi Streamlit untuk memvisualisasikan dan mengelola data realisasi anggaran
 Badan Keuangan dan Aset Daerah (BKAD).
 """
+import sys
+import os
+
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+
 import streamlit as st
 import pandas as pd
-import os
 
 from utils.data_loader import (
     load_data,
@@ -543,11 +549,11 @@ if page == "📝 Kelola Data":
             else:
                 preview["kode_str"] = "-"
 
-            pagu_num = pd.to_numeric(preview.get("pagu_anggaran", 0), errors="coerce").fillna(0)
-            real_bln_num = pd.to_numeric(preview.get("realisasi", 0), errors="coerce").fillna(0)
-            real_kum_num = pd.to_numeric(preview.get("realisasi_kumulatif", real_bln_num), errors="coerce").fillna(0)
+            pagu_num = pd.to_numeric(preview.get("pagu_anggaran", 0), errors="coerce").fillna(0.0)
+            real_bln_num = pd.to_numeric(preview.get("realisasi", 0), errors="coerce").fillna(0.0)
+            real_kum_num = pd.to_numeric(preview.get("realisasi_kumulatif", real_bln_num), errors="coerce").fillna(0.0)
             sisa_num = pagu_num - real_kum_num
-            capaian_pct = (real_kum_num / pagu_num.replace(0, 1) * 100).round(2)
+            capaian_pct = pd.to_numeric(real_kum_num / pagu_num.replace(0, 1) * 100, errors="coerce").fillna(0.0).round(2)
 
             preview["pagu_fmt"] = pagu_num.apply(lambda v: f"Rp {format_rupiah_titik(v)}")
             preview["real_bln_fmt"] = real_bln_num.apply(lambda v: f"Rp {format_rupiah_titik(v)}")
@@ -751,10 +757,10 @@ if page == "📝 Kelola Data":
                 else:
                     display_del["kode_str"] = "-"
 
-                pagu_num = pd.to_numeric(display_del["pagu_anggaran"], errors="coerce").fillna(0) if "pagu_anggaran" in display_del.columns else pd.Series(0, index=display_del.index)
-                real_num = pd.to_numeric(display_del["realisasi"], errors="coerce").fillna(0) if "realisasi" in display_del.columns else pd.Series(0, index=display_del.index)
+                pagu_num = pd.to_numeric(display_del["pagu_anggaran"], errors="coerce").fillna(0.0) if "pagu_anggaran" in display_del.columns else pd.Series(0.0, index=display_del.index)
+                real_num = pd.to_numeric(display_del["realisasi"], errors="coerce").fillna(0.0) if "realisasi" in display_del.columns else pd.Series(0.0, index=display_del.index)
                 sisa_num = pagu_num - real_num
-                capaian_pct = (real_num / pagu_num.replace(0, 1) * 100).round(2)
+                capaian_pct = pd.to_numeric(real_num / pagu_num.replace(0, 1) * 100, errors="coerce").fillna(0.0).round(2)
 
                 display_del["pagu_fmt"] = pagu_num.apply(lambda v: f"Rp {format_rupiah_titik(v)}")
                 display_del["realisasi_fmt"] = real_num.apply(lambda v: f"Rp {format_rupiah_titik(v)}")
@@ -1085,7 +1091,7 @@ elif page == "📊 Dashboard":
     with col_gauge:
         st.markdown('<div class="section-header">🎯 Capaian Realisasi</div>', unsafe_allow_html=True)
         gauge_fig = create_gauge_chart(summary["persentase"])
-        st.plotly_chart(gauge_fig, use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(gauge_fig, use_container_width=True, config={"displayModeBar": False}, key="chart_belanja_gauge")
 
     with col_trend:
         st.markdown('<div class="section-header">📈 Tren Realisasi</div>', unsafe_allow_html=True)
@@ -1094,12 +1100,12 @@ elif page == "📊 Dashboard":
         with trend_tab1:
             monthly = get_monthly_trend(df_filtered)
             trend_fig = create_trend_chart(monthly, mode="bulanan")
-            st.plotly_chart(trend_fig, use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(trend_fig, use_container_width=True, config={"displayModeBar": False}, key="chart_belanja_trend_monthly")
 
         with trend_tab2:
             quarterly = get_quarterly_trend(df_filtered)
             trend_fig_q = create_trend_chart(quarterly, mode="triwulanan")
-            st.plotly_chart(trend_fig_q, use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(trend_fig_q, use_container_width=True, config={"displayModeBar": False}, key="chart_belanja_trend_quarterly")
 
     # ── Penanggung Jawab Comparison ──
     if "penanggungjawab" in df_filtered.columns:
@@ -1107,7 +1113,7 @@ elif page == "📊 Dashboard":
         if not pj_comp.empty:
             st.markdown('<div class="section-header">🏢 Capaian Realisasi per Bidang Penanggung Jawab</div>', unsafe_allow_html=True)
             pj_fig = create_pj_comparison(pj_comp)
-            st.plotly_chart(pj_fig, use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(pj_fig, use_container_width=True, config={"displayModeBar": False}, key="chart_belanja_pj")
             st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
 
     # ── Belanja Comparison + Composition ──
@@ -1134,13 +1140,13 @@ elif page == "📊 Dashboard":
             bar_limit = None
 
         bar_fig = create_belanja_comparison(belanja_comparison, max_items=bar_limit)
-        st.plotly_chart(bar_fig, use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(bar_fig, use_container_width=True, config={"displayModeBar": False}, key="chart_belanja_subkegiatan_bar")
 
     with col_donut:
         st.markdown('<div class="section-header">🥧 Komposisi Realisasi Belanja</div>', unsafe_allow_html=True)
         composition = get_belanja_composition(df_filtered)
         donut_fig = create_donut_chart(composition, max_slices=5)
-        st.plotly_chart(donut_fig, use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(donut_fig, use_container_width=True, config={"displayModeBar": False}, key="chart_belanja_donut")
 
     # ── Heatmap ──
     st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
@@ -1183,7 +1189,7 @@ elif page == "📊 Dashboard":
             limit_val = None
 
     heatmap_fig = create_heatmap_belanja_monthly(df_filtered, group_col=group_col, max_items=limit_val)
-    st.plotly_chart(heatmap_fig, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(heatmap_fig, use_container_width=True, config={"displayModeBar": False}, key="chart_belanja_heatmap")
 
     # ── Detail Table ──
     st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
@@ -1216,49 +1222,54 @@ elif page == "📊 Dashboard":
         latest_detail = latest_detail[mask]
         st.caption(f"Pencarian Cepat: Menampilkan **{len(latest_detail)}** sub-kegiatan yang cocok.")
 
-    real_col = "realisasi_kumulatif" if "realisasi_kumulatif" in latest_detail.columns else "realisasi"
-    latest_detail["sisa"] = latest_detail["pagu_anggaran"] - latest_detail[real_col]
-    latest_detail["persentase"] = (
-        (latest_detail[real_col] / latest_detail["pagu_anggaran"].replace(0, 1) * 100)
-        .round(2)
-        .fillna(0)
-    )
+    if latest_detail.empty:
+        st.info("ℹ️ Tidak ada sub-kegiatan yang sesuai dengan filter pencarian.")
+    else:
+        real_col = "realisasi_kumulatif" if "realisasi_kumulatif" in latest_detail.columns else "realisasi"
+        pagu_num = pd.to_numeric(latest_detail["pagu_anggaran"], errors="coerce").fillna(0.0)
+        real_num = pd.to_numeric(latest_detail[real_col], errors="coerce").fillna(0.0)
 
-    latest_detail = latest_detail.sort_values("pagu_anggaran", ascending=False)
+        latest_detail["pagu_anggaran"] = pagu_num
+        latest_detail[real_col] = real_num
+        latest_detail["sisa"] = pagu_num - real_num
+        pct_raw = real_num / pagu_num.replace(0, 1) * 100
+        latest_detail["persentase"] = pd.to_numeric(pct_raw, errors="coerce").fillna(0.0).round(2)
 
-    latest_detail["pagu_fmt"] = latest_detail["pagu_anggaran"].apply(format_rupiah)
-    latest_detail["realisasi_fmt"] = latest_detail[real_col].apply(format_rupiah)
-    latest_detail["sisa_fmt"] = latest_detail["sisa"].apply(format_rupiah)
-    latest_detail["persentase_fmt"] = latest_detail["persentase"].apply(lambda x: f"{x:.2f}%")
+        latest_detail = latest_detail.sort_values("pagu_anggaran", ascending=False)
 
-    cols_to_show = []
-    col_rename = {}
+        latest_detail["pagu_fmt"] = latest_detail["pagu_anggaran"].apply(format_rupiah)
+        latest_detail["realisasi_fmt"] = latest_detail[real_col].apply(format_rupiah)
+        latest_detail["sisa_fmt"] = latest_detail["sisa"].apply(format_rupiah)
+        latest_detail["persentase_fmt"] = latest_detail["persentase"].apply(lambda x: f"{x:.2f}%")
 
-    if "kode_rekening" in latest_detail.columns:
-        cols_to_show.append("kode_rekening")
-        col_rename["kode_rekening"] = "Kode Rekening"
+        cols_to_show = []
+        col_rename = {}
 
-    if "penanggungjawab" in latest_detail.columns:
-        cols_to_show.append("penanggungjawab")
-        col_rename["penanggungjawab"] = "Penanggung Jawab"
+        if "kode_rekening" in latest_detail.columns:
+            cols_to_show.append("kode_rekening")
+            col_rename["kode_rekening"] = "Kode Rekening"
 
-    cols_to_show.extend(["jenis_belanja", "pagu_fmt", "realisasi_fmt", "sisa_fmt", "persentase_fmt"])
-    col_rename.update({
-        "jenis_belanja": "Sub-Kegiatan / Uraian",
-        "pagu_fmt": "Pagu Anggaran",
-        "realisasi_fmt": "Realisasi (Kumulatif)",
-        "sisa_fmt": "Sisa Anggaran",
-        "persentase_fmt": "% Capaian",
-    })
+        if "penanggungjawab" in latest_detail.columns:
+            cols_to_show.append("penanggungjawab")
+            col_rename["penanggungjawab"] = "Penanggung Jawab"
 
-    display_table = latest_detail[cols_to_show].rename(columns=col_rename)
+        cols_to_show.extend(["jenis_belanja", "pagu_fmt", "realisasi_fmt", "sisa_fmt", "persentase_fmt"])
+        col_rename.update({
+            "jenis_belanja": "Sub-Kegiatan / Uraian",
+            "pagu_fmt": "Pagu Anggaran",
+            "realisasi_fmt": "Realisasi (Kumulatif)",
+            "sisa_fmt": "Sisa Anggaran",
+            "persentase_fmt": "% Capaian",
+        })
 
-    st.dataframe(
-        display_table,
-        use_container_width=True,
-        hide_index=True,
-        height=min(450, len(display_table) * 38 + 50),
-    )
+        display_table = latest_detail[cols_to_show].rename(columns=col_rename)
+
+        st.dataframe(
+            display_table,
+            use_container_width=True,
+            hide_index=True,
+            height=min(450, len(display_table) * 38 + 50),
+        )
 
     # ── Download ──
     st.markdown("")

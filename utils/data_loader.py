@@ -94,11 +94,8 @@ def _process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     # Hitung Realisasi Kumulatif (terakumulasi dari bulan ke bulan per item)
     df["realisasi_kumulatif"] = df.groupby(group_cols, dropna=False)["realisasi"].cumsum()
     df["sisa_anggaran"] = df["pagu_anggaran"] - df["realisasi_kumulatif"]
-    df["persentase_realisasi"] = (
-        (df["realisasi_kumulatif"] / df["pagu_anggaran"].replace(0, 1) * 100)
-        .round(2)
-        .fillna(0)
-    )
+    pct_raw = df["realisasi_kumulatif"] / df["pagu_anggaran"].replace(0, 1) * 100
+    df["persentase_realisasi"] = pd.to_numeric(pct_raw, errors="coerce").fillna(0.0).round(2)
 
     return df
 
@@ -272,12 +269,13 @@ def get_pj_comparison(df: pd.DataFrame) -> pd.DataFrame:
         )
         .reset_index()
     )
-    pj_df["sisa"] = pj_df["pagu_anggaran"] - pj_df["realisasi"]
-    pj_df["persentase"] = (
-        (pj_df["realisasi"] / pj_df["pagu_anggaran"].replace(0, 1) * 100)
-        .round(2)
-        .fillna(0)
-    )
+    p_pagu = pd.to_numeric(pj_df["pagu_anggaran"], errors="coerce").fillna(0.0)
+    p_real = pd.to_numeric(pj_df["realisasi"], errors="coerce").fillna(0.0)
+    pj_df["pagu_anggaran"] = p_pagu
+    pj_df["realisasi"] = p_real
+    pj_df["sisa"] = p_pagu - p_real
+    pct_raw = p_real / p_pagu.replace(0, 1) * 100
+    pj_df["persentase"] = pd.to_numeric(pct_raw, errors="coerce").fillna(0.0).round(2)
     pj_df = pj_df.sort_values("persentase", ascending=False)
     return pj_df
 
@@ -346,9 +344,8 @@ def get_quarterly_trend(df: pd.DataFrame) -> pd.DataFrame:
 
     quarterly["pagu_anggaran"] = total_pagu
     quarterly["nama_triwulan"] = quarterly["triwulan"].map(NAMA_TRIWULAN)
-    quarterly["persentase"] = (
-        (quarterly["realisasi_kumulatif"] / max(total_pagu, 1.0) * 100).round(2) if total_pagu > 0 else 0.0
-    )
+    pct_raw = quarterly["realisasi_kumulatif"] / max(total_pagu, 1.0) * 100
+    quarterly["persentase"] = pd.to_numeric(pct_raw, errors="coerce").fillna(0.0).round(2) if total_pagu > 0 else 0.0
 
     return quarterly
 
@@ -379,12 +376,13 @@ def get_belanja_comparison(df: pd.DataFrame) -> pd.DataFrame:
         )
         .reset_index()
     )
-    comparison["sisa"] = comparison["pagu_anggaran"] - comparison["realisasi"]
-    comparison["persentase"] = (
-        (comparison["realisasi"] / comparison["pagu_anggaran"].replace(0, 1) * 100)
-        .round(2)
-        .fillna(0)
-    )
+    b_pagu = pd.to_numeric(comparison["pagu_anggaran"], errors="coerce").fillna(0.0)
+    b_real = pd.to_numeric(comparison["realisasi"], errors="coerce").fillna(0.0)
+    comparison["pagu_anggaran"] = b_pagu
+    comparison["realisasi"] = b_real
+    comparison["sisa"] = b_pagu - b_real
+    pct_raw = b_real / b_pagu.replace(0, 1) * 100
+    comparison["persentase"] = pd.to_numeric(pct_raw, errors="coerce").fillna(0.0).round(2)
     comparison = comparison.sort_values("persentase", ascending=False)
 
     return comparison
@@ -416,10 +414,9 @@ def get_belanja_composition(df: pd.DataFrame) -> pd.DataFrame:
         .reset_index()
     )
     total = composition["realisasi"].sum()
+    pct_raw = composition["realisasi"] / max(total, 1.0) * 100
     composition["persentase_komposisi"] = (
-        (composition["realisasi"] / max(total, 1.0) * 100)
-        .round(2)
-        .fillna(0)
+        pd.to_numeric(pct_raw, errors="coerce").fillna(0.0).round(2)
     ) if total > 0 else 0.0
 
     return composition
@@ -443,8 +440,18 @@ def get_executive_insights(df: pd.DataFrame, summary: dict) -> dict:
 
     idx = df.groupby(group_cols, dropna=False)["bulan"].idxmax()
     latest = df.loc[idx].copy()
+    if latest.empty:
+        return {
+            "top_sub": None,
+            "lowest_sub": None,
+            "top_pj": None,
+            "bullets": ["Belum ada data anggaran yang tersedia."],
+        }
+
     real_col = "realisasi_kumulatif" if "realisasi_kumulatif" in latest.columns else "realisasi"
-    latest["persentase"] = (latest[real_col] / latest["pagu_anggaran"].replace(0, 1) * 100).round(2)
+    l_pagu = pd.to_numeric(latest["pagu_anggaran"], errors="coerce").fillna(0.0)
+    l_real = pd.to_numeric(latest[real_col], errors="coerce").fillna(0.0)
+    latest["persentase"] = pd.to_numeric(l_real / l_pagu.replace(0, 1) * 100, errors="coerce").fillna(0.0).round(2)
 
     # Sub-kegiatan tertinggi & terendah
     sorted_sub = latest.sort_values("persentase", ascending=False)
@@ -458,7 +465,9 @@ def get_executive_insights(df: pd.DataFrame, summary: dict) -> dict:
             pagu=("pagu_anggaran", "sum"),
             real=(real_col, "sum"),
         ).reset_index()
-        pj_agg["pct"] = (pj_agg["real"] / pj_agg["pagu"].replace(0, 1) * 100).round(2)
+        pj_p = pd.to_numeric(pj_agg["pagu"], errors="coerce").fillna(0.0)
+        pj_r = pd.to_numeric(pj_agg["real"], errors="coerce").fillna(0.0)
+        pj_agg["pct"] = pd.to_numeric(pj_r / pj_p.replace(0, 1) * 100, errors="coerce").fillna(0.0).round(2)
         pj_agg = pj_agg.sort_values("pct", ascending=False)
         if not pj_agg.empty:
             top_pj_row = pj_agg.iloc[0]
