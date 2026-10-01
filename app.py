@@ -1204,26 +1204,8 @@ elif page == "📊 Dashboard":
     idx = df_filtered.groupby(group_cols, dropna=False)["bulan"].idxmax()
     latest_detail = df_filtered.loc[idx].copy()
 
-    # Search filter
-    col_search1, _ = st.columns([2, 1])
-    with col_search1:
-        search_query = st.text_input(
-            "🔍 Cari Sub-Kegiatan / Kode Rekening / Bidang...",
-            placeholder="Ketik nama sub-kegiatan, kode rekening, atau bidang...",
-            key="dashboard_search_input",
-        ).strip().lower()
-
-    if search_query:
-        mask = latest_detail["jenis_belanja"].astype(str).str.lower().str.contains(search_query)
-        if "kode_rekening" in latest_detail.columns:
-            mask = mask | latest_detail["kode_rekening"].astype(str).str.lower().str.contains(search_query)
-        if "penanggungjawab" in latest_detail.columns:
-            mask = mask | latest_detail["penanggungjawab"].astype(str).str.lower().str.contains(search_query)
-        latest_detail = latest_detail[mask]
-        st.caption(f"Pencarian Cepat: Menampilkan **{len(latest_detail)}** sub-kegiatan yang cocok.")
-
     if latest_detail.empty:
-        st.info("ℹ️ Tidak ada sub-kegiatan yang sesuai dengan filter pencarian.")
+        st.info("ℹ️ Belum ada rincian data sub-kegiatan belanja.")
     else:
         real_col = "realisasi_kumulatif" if "realisasi_kumulatif" in latest_detail.columns else "realisasi"
         pagu_num = pd.to_numeric(latest_detail["pagu_anggaran"], errors="coerce").fillna(0.0)
@@ -1235,41 +1217,127 @@ elif page == "📊 Dashboard":
         pct_raw = real_num / pagu_num.replace(0, 1) * 100
         latest_detail["persentase"] = pd.to_numeric(pct_raw, errors="coerce").fillna(0.0).round(2)
 
-        latest_detail = latest_detail.sort_values("pagu_anggaran", ascending=False)
+        def assign_status(p):
+            if p >= 80.0:
+                return "🟢 Baik"
+            elif p >= 50.0:
+                return "🟡 Cukup"
+            else:
+                return "🔴 Rendah"
 
-        latest_detail["pagu_fmt"] = latest_detail["pagu_anggaran"].apply(format_rupiah)
-        latest_detail["realisasi_fmt"] = latest_detail[real_col].apply(format_rupiah)
-        latest_detail["sisa_fmt"] = latest_detail["sisa"].apply(format_rupiah)
-        latest_detail["persentase_fmt"] = latest_detail["persentase"].apply(lambda x: f"{x:.2f}%")
+        latest_detail["status_badge"] = latest_detail["persentase"].apply(assign_status)
 
-        cols_to_show = []
-        col_rename = {}
+        # ── Controls: Search & Category Filter ──
+        col_search1, col_filter_cat = st.columns([1.8, 1.2])
+        with col_search1:
+            search_query = st.text_input(
+                "🔍 Cari Sub-Kegiatan / Kode Rekening / Bidang...",
+                placeholder="Ketik nama sub-kegiatan, kode rekening, atau bidang...",
+                key="dashboard_search_input",
+            ).strip().lower()
 
-        if "kode_rekening" in latest_detail.columns:
-            cols_to_show.append("kode_rekening")
-            col_rename["kode_rekening"] = "Kode Rekening"
+        with col_filter_cat:
+            status_filter = st.selectbox(
+                "🎯 Filter Kategori Capaian:",
+                options=["Semua Status", "🟢 Capaian Baik (≥80%)", "🟡 Capaian Cukup (50–79%)", "🔴 Perlu Perhatian (<50%)"],
+                index=0,
+                key="table_status_filter",
+            )
 
-        if "penanggungjawab" in latest_detail.columns:
-            cols_to_show.append("penanggungjawab")
-            col_rename["penanggungjawab"] = "Penanggung Jawab"
+        if search_query:
+            mask = latest_detail["jenis_belanja"].astype(str).str.lower().str.contains(search_query)
+            if "kode_rekening" in latest_detail.columns:
+                mask = mask | latest_detail["kode_rekening"].astype(str).str.lower().str.contains(search_query)
+            if "penanggungjawab" in latest_detail.columns:
+                mask = mask | latest_detail["penanggungjawab"].astype(str).str.lower().str.contains(search_query)
+            latest_detail = latest_detail[mask]
 
-        cols_to_show.extend(["jenis_belanja", "pagu_fmt", "realisasi_fmt", "sisa_fmt", "persentase_fmt"])
-        col_rename.update({
-            "jenis_belanja": "Sub-Kegiatan / Uraian",
-            "pagu_fmt": "Pagu Anggaran",
-            "realisasi_fmt": "Realisasi (Kumulatif)",
-            "sisa_fmt": "Sisa Anggaran",
-            "persentase_fmt": "% Capaian",
-        })
+        if "🟢" in status_filter:
+            latest_detail = latest_detail[latest_detail["persentase"] >= 80.0]
+        elif "🟡" in status_filter:
+            latest_detail = latest_detail[(latest_detail["persentase"] >= 50.0) & (latest_detail["persentase"] < 80.0)]
+        elif "🔴" in status_filter:
+            latest_detail = latest_detail[latest_detail["persentase"] < 50.0]
 
-        display_table = latest_detail[cols_to_show].rename(columns=col_rename)
+        if latest_detail.empty:
+            st.info("ℹ️ Tidak ada sub-kegiatan yang sesuai dengan filter pencarian / kategori yang dipilih.")
+        else:
+            # Mini Counter Badges
+            total_items = len(latest_detail)
+            count_high = (latest_detail["persentase"] >= 80.0).sum()
+            count_mid = ((latest_detail["persentase"] >= 50.0) & (latest_detail["persentase"] < 80.0)).sum()
+            count_low = (latest_detail["persentase"] < 50.0).sum()
 
-        st.dataframe(
-            display_table,
-            use_container_width=True,
-            hide_index=True,
-            height=min(450, len(display_table) * 38 + 50),
-        )
+            st.markdown(f"""
+            <div style="display: flex; gap: 0.6rem; align-items: center; margin-bottom: 0.8rem; font-size: 0.85rem; flex-wrap: wrap;">
+                <span style="background: rgba(255,255,255,0.06); padding: 3px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); color: #E2E8F0;">Menampilkan: <b>{total_items}</b> sub-kegiatan</span>
+                <span style="background: rgba(46,204,113,0.15); padding: 3px 10px; border-radius: 6px; border: 1px solid rgba(46,204,113,0.3); color: #2ECC71;">🟢 Baik: <b>{count_high}</b></span>
+                <span style="background: rgba(243,156,18,0.15); padding: 3px 10px; border-radius: 6px; border: 1px solid rgba(243,156,18,0.3); color: #F39C12;">🟡 Cukup: <b>{count_mid}</b></span>
+                <span style="background: rgba(231,76,60,0.15); padding: 3px 10px; border-radius: 6px; border: 1px solid rgba(231,76,60,0.3); color: #E74C3C;">🔴 Rendah: <b>{count_low}</b></span>
+            </div>
+            """, unsafe_allow_html=True)
+
+            latest_detail = latest_detail.sort_values("pagu_anggaran", ascending=False)
+
+            latest_detail["pagu_fmt"] = latest_detail["pagu_anggaran"].apply(format_rupiah)
+            latest_detail["realisasi_fmt"] = latest_detail[real_col].apply(format_rupiah)
+            latest_detail["sisa_fmt"] = latest_detail["sisa"].apply(format_rupiah)
+
+            cols_to_show = []
+            col_rename = {}
+
+            if "kode_rekening" in latest_detail.columns:
+                cols_to_show.append("kode_rekening")
+                col_rename["kode_rekening"] = "Kode Rekening"
+
+            if "penanggungjawab" in latest_detail.columns:
+                cols_to_show.append("penanggungjawab")
+                col_rename["penanggungjawab"] = "Penanggung Jawab"
+
+            cols_to_show.extend(["jenis_belanja", "pagu_fmt", "realisasi_fmt", "sisa_fmt", "persentase", "status_badge"])
+            col_rename.update({
+                "jenis_belanja": "Sub-Kegiatan / Uraian",
+                "pagu_fmt": "Pagu Anggaran",
+                "realisasi_fmt": "Realisasi (Kumulatif)",
+                "sisa_fmt": "Sisa Anggaran",
+                "persentase": "% Capaian",
+                "status_badge": "Status",
+            })
+
+            display_table = latest_detail[cols_to_show].rename(columns=col_rename)
+
+            max_cap = float(latest_detail["persentase"].max()) if not latest_detail.empty else 100.0
+            max_progress = max(100.0, max_cap)
+
+            column_config = {
+                "Kode Rekening": st.column_config.TextColumn("Kode Rekening", width="small"),
+                "Penanggung Jawab": st.column_config.TextColumn("Penanggung Jawab", width="medium"),
+                "Sub-Kegiatan / Uraian": st.column_config.TextColumn("Sub-Kegiatan / Uraian", width="large"),
+                "Pagu Anggaran": st.column_config.TextColumn("Pagu Anggaran", width="medium"),
+                "Realisasi (Kumulatif)": st.column_config.TextColumn("Realisasi (Kumulatif)", width="medium"),
+                "Sisa Anggaran": st.column_config.TextColumn("Sisa Anggaran", width="medium"),
+                "% Capaian": st.column_config.ProgressColumn(
+                    "% Capaian",
+                    help="Visualisasi tingkat penyerapan anggaran kumulatif terhadap pagu",
+                    format="%.2f%%",
+                    min_value=0.0,
+                    max_value=max_progress,
+                    width="medium",
+                ),
+                "Status": st.column_config.TextColumn(
+                    "Status",
+                    help="Status serapan: 🟢 Baik (≥80%), 🟡 Cukup (50–79%), 🔴 Rendah (<50%)",
+                    width="small",
+                ),
+            }
+
+            st.dataframe(
+                display_table,
+                column_config=column_config,
+                use_container_width=True,
+                hide_index=True,
+                height=min(480, len(display_table) * 38 + 55),
+            )
 
     # ── Download ──
     st.markdown("")
