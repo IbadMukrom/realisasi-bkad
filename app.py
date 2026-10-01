@@ -168,45 +168,89 @@ st.markdown("""
         box-shadow: 0 0 12px rgba(0, 230, 118, 0.15);
     }
 
-    /* Glassmorphism Metric Cards */
+    /* Ultra-Premium Glassmorphism Metric Cards */
     .metric-card {
-        background: linear-gradient(145deg, rgba(26, 36, 56, 0.85) 0%, rgba(13, 19, 33, 0.95) 100%);
-        backdrop-filter: blur(16px);
-        padding: 1.15rem 1.25rem;
-        border-radius: 16px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        background: linear-gradient(135deg, rgba(20, 28, 45, 0.75) 0%, rgba(10, 15, 26, 0.90) 100%);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        padding: 1.2rem 1.25rem;
+        border-radius: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
         position: relative;
         overflow: hidden;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        min-height: 135px;
+        min-height: 155px;
+    }
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; height: 100%;
+        background: radial-gradient(circle at top right, rgba(255, 255, 255, 0.05), transparent 70%);
+        pointer-events: none;
     }
     .metric-card:hover {
-        transform: translateY(-4px);
+        transform: translateY(-6px) scale(1.015);
     }
     .metric-card.pagu-card { border-top: 3px solid #29B6F6; }
     .metric-card.pagu-card:hover {
-        border-color: rgba(41, 182, 246, 0.6);
-        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45), 0 0 20px rgba(41, 182, 246, 0.18);
+        border-color: #29B6F6;
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5), 0 0 28px rgba(41, 182, 246, 0.28);
     }
     .metric-card.realisasi-card { border-top: 3px solid #00E676; }
     .metric-card.realisasi-card:hover {
-        border-color: rgba(0, 230, 118, 0.6);
-        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45), 0 0 20px rgba(0, 230, 118, 0.18);
+        border-color: #00E676;
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5), 0 0 28px rgba(0, 230, 118, 0.28);
     }
     .metric-card.sisa-card { border-top: 3px solid #FF5252; }
     .metric-card.sisa-card:hover {
-        border-color: rgba(255, 82, 82, 0.6);
-        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45), 0 0 20px rgba(255, 82, 82, 0.18);
+        border-color: #FF5252;
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5), 0 0 28px rgba(255, 82, 82, 0.28);
     }
     .metric-card.persentase-card { border-top: 3px solid #FFCA28; }
     .metric-card.persentase-card:hover {
-        border-color: rgba(255, 202, 40, 0.6);
-        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45), 0 0 20px rgba(255, 202, 40, 0.18);
+        border-color: #FFCA28;
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5), 0 0 28px rgba(255, 202, 40, 0.28);
     }
+
+    /* Mini Progress Track di Bawah Kartu */
+    .kpi-progress-track {
+        width: 100%;
+        height: 5px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 4px;
+        margin-top: 0.75rem;
+        overflow: hidden;
+        position: relative;
+    }
+    .kpi-progress-bar {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.8s ease-in-out;
+    }
+    .kpi-progress-bar.blue { background: linear-gradient(90deg, #0288D1, #29B6F6); box-shadow: 0 0 8px rgba(41, 182, 246, 0.6); }
+    .kpi-progress-bar.green { background: linear-gradient(90deg, #00B0FF, #00E676); box-shadow: 0 0 8px rgba(0, 230, 118, 0.6); }
+    .kpi-progress-bar.red { background: linear-gradient(90deg, #D32F2F, #FF5252); box-shadow: 0 0 8px rgba(255, 82, 82, 0.6); }
+    .kpi-progress-bar.orange { background: linear-gradient(90deg, #F57C00, #FFCA28); box-shadow: 0 0 8px rgba(255, 202, 40, 0.6); }
+
+    /* KPI Pills & Badges */
+    .kpi-pill {
+        font-size: 0.68rem;
+        font-weight: 700;
+        padding: 2px 7px;
+        border-radius: 6px;
+        letter-spacing: 0.02em;
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+    }
+    .kpi-pill.green { background: rgba(0, 230, 118, 0.15); color: #00E676; border: 1px solid rgba(0, 230, 118, 0.3); }
+    .kpi-pill.yellow { background: rgba(255, 202, 40, 0.15); color: #FFCA28; border: 1px solid rgba(255, 202, 40, 0.3); }
+    .kpi-pill.red { background: rgba(255, 82, 82, 0.15); color: #FF5252; border: 1px solid rgba(255, 82, 82, 0.3); }
+    .kpi-pill.blue { background: rgba(41, 182, 246, 0.15); color: #29B6F6; border: 1px solid rgba(41, 182, 246, 0.3); }
 
     .metric-header {
         display: flex;
@@ -222,18 +266,18 @@ st.markdown("""
         letter-spacing: 0.06em;
     }
     .metric-icon-badge {
-        width: 28px;
-        height: 28px;
-        border-radius: 8px;
+        width: 32px;
+        height: 32px;
+        border-radius: 9px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 0.9rem;
+        font-size: 0.95rem;
     }
-    .metric-icon-badge.blue { background: rgba(41, 182, 246, 0.12); }
-    .metric-icon-badge.green { background: rgba(0, 230, 118, 0.12); }
-    .metric-icon-badge.red { background: rgba(255, 82, 82, 0.12); }
-    .metric-icon-badge.orange { background: rgba(255, 202, 40, 0.12); }
+    .metric-icon-badge.blue { background: rgba(41, 182, 246, 0.15); box-shadow: 0 0 10px rgba(41, 182, 246, 0.2); }
+    .metric-icon-badge.green { background: rgba(0, 230, 118, 0.15); box-shadow: 0 0 10px rgba(0, 230, 118, 0.2); }
+    .metric-icon-badge.red { background: rgba(255, 82, 82, 0.15); box-shadow: 0 0 10px rgba(255, 82, 82, 0.2); }
+    .metric-icon-badge.orange { background: rgba(255, 202, 40, 0.15); box-shadow: 0 0 10px rgba(255, 202, 40, 0.2); }
 
     .metric-value {
         font-family: 'JetBrains Mono', monospace;
@@ -1014,52 +1058,91 @@ elif page == "📊 Dashboard":
 
     st.markdown("")
 
+    # ── Metrik Laju Serapan & Target Kumulatif ──
+    curr_m = summary.get("latest_bulan", 1)
+    target_ideal_pct = (curr_m / 12.0) * 100.0
+    pct = summary['persentase']
+    selisih_laju = pct - target_ideal_pct
+
+    if selisih_laju >= 0:
+        laju_badge = f'<span class="kpi-pill green">⚡ On-Track (+{abs(selisih_laju):.1f}%)</span>'
+    elif selisih_laju >= -10:
+        laju_badge = f'<span class="kpi-pill yellow">⏱️ Cukup ({selisih_laju:.1f}%)</span>'
+    else:
+        laju_badge = f'<span class="kpi-pill red">⚠️ Terlambat ({selisih_laju:.1f}%)</span>'
+
+    sisa_pct = max(0.0, min(100.0, 100.0 - pct)) if pct <= 100.0 else 0.0
+    real_bar_pct = min(100.0, max(0.0, pct))
+
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
         st.markdown(f"""
         <div class="metric-card pagu-card">
-            <div class="metric-header">
-                <span class="metric-label">Total Pagu</span>
-                <div class="metric-icon-badge blue">💰</div>
+            <div>
+                <div class="metric-header">
+                    <span class="metric-label">Total Pagu Anggaran</span>
+                    <div class="metric-icon-badge blue">💰</div>
+                </div>
+                <div class="metric-value blue">
+                    <span class="curr-prefix">Rp</span>{format_rupiah_titik(summary['total_pagu'])}
+                </div>
+                <div class="metric-subtext">
+                    <span>{format_rupiah_ringkas(summary['total_pagu'])}</span>
+                    <span class="kpi-pill blue">100% Alokasi</span>
+                </div>
             </div>
-            <div class="metric-value blue">
-                <span class="curr-prefix">Rp</span>{format_rupiah_titik(summary['total_pagu'])}
+            <div class="kpi-progress-track">
+                <div class="kpi-progress-bar blue" style="width: 100%;"></div>
             </div>
-            <div class="metric-subtext">{format_rupiah_ringkas(summary['total_pagu'])}</div>
         </div>
         """, unsafe_allow_html=True)
 
     with col2:
         st.markdown(f"""
         <div class="metric-card realisasi-card">
-            <div class="metric-header">
-                <span class="metric-label">Total Realisasi</span>
-                <div class="metric-icon-badge green">✅</div>
+            <div>
+                <div class="metric-header">
+                    <span class="metric-label">Realisasi Kumulatif</span>
+                    <div class="metric-icon-badge green">✅</div>
+                </div>
+                <div class="metric-value green">
+                    <span class="curr-prefix">Rp</span>{format_rupiah_titik(summary['total_realisasi'])}
+                </div>
+                <div class="metric-subtext">
+                    <span>{format_rupiah_ringkas(summary['total_realisasi'])}</span>
+                    {laju_badge}
+                </div>
             </div>
-            <div class="metric-value green">
-                <span class="curr-prefix">Rp</span>{format_rupiah_titik(summary['total_realisasi'])}
+            <div class="kpi-progress-track">
+                <div class="kpi-progress-bar green" style="width: {real_bar_pct:.1f}%;"></div>
             </div>
-            <div class="metric-subtext">{format_rupiah_ringkas(summary['total_realisasi'])}</div>
         </div>
         """, unsafe_allow_html=True)
 
     with col3:
         st.markdown(f"""
         <div class="metric-card sisa-card">
-            <div class="metric-header">
-                <span class="metric-label">Sisa Pagu</span>
-                <div class="metric-icon-badge red">📉</div>
+            <div>
+                <div class="metric-header">
+                    <span class="metric-label">Sisa Pagu Anggaran</span>
+                    <div class="metric-icon-badge red">📉</div>
+                </div>
+                <div class="metric-value red">
+                    <span class="curr-prefix">Rp</span>{format_rupiah_titik(summary['total_sisa'])}
+                </div>
+                <div class="metric-subtext">
+                    <span>{format_rupiah_ringkas(summary['total_sisa'])}</span>
+                    <span class="kpi-pill red">{sisa_pct:.1f}% Sisa</span>
+                </div>
             </div>
-            <div class="metric-value red">
-                <span class="curr-prefix">Rp</span>{format_rupiah_titik(summary['total_sisa'])}
+            <div class="kpi-progress-track">
+                <div class="kpi-progress-bar red" style="width: {sisa_pct:.1f}%;"></div>
             </div>
-            <div class="metric-subtext">{format_rupiah_ringkas(summary['total_sisa'])}</div>
         </div>
         """, unsafe_allow_html=True)
 
     with col4:
-        pct = summary['persentase']
         if pct >= 80:
             badge_class = "status-good"
             badge_text = "Baik"
@@ -1072,13 +1155,19 @@ elif page == "📊 Dashboard":
 
         st.markdown(f"""
         <div class="metric-card persentase-card">
-            <div class="metric-header">
-                <span class="metric-label">Persentase ({latest_bln_name})</span>
-                <div class="metric-icon-badge orange">📊</div>
+            <div>
+                <div class="metric-header">
+                    <span class="metric-label">Capaian ({latest_bln_name})</span>
+                    <div class="metric-icon-badge orange">📊</div>
+                </div>
+                <div class="metric-value orange">{pct:.2f}%</div>
+                <div class="metric-subtext">
+                    <span class="status-badge {badge_class}">{badge_text}</span>
+                    <span style="font-size:0.7rem; color:#94A3B8; margin-left:auto;">Target Id: <b>{target_ideal_pct:.0f}%</b></span>
+                </div>
             </div>
-            <div class="metric-value orange">{pct:.2f}%</div>
-            <div class="metric-subtext">
-                <span class="status-badge {badge_class}">{badge_text}</span>
+            <div class="kpi-progress-track">
+                <div class="kpi-progress-bar orange" style="width: {real_bar_pct:.1f}%;"></div>
             </div>
         </div>
         """, unsafe_allow_html=True)
