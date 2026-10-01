@@ -1337,7 +1337,13 @@ elif page == "📊 Dashboard":
     # TAB 2: TREN, KOMPARASI & HEATMAP
     # ═══════════════════════════════════════════════════════════════════════════
     with tab_tren:
-        st.markdown('<div class="section-header">📈 Tren Realisasi Belanja</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">📈 Tren Realisasi Belanja & Baseline Target</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div style="font-size: 0.84rem; color: #94A3B8; margin-top: -0.6rem; margin-bottom: 0.8rem;">'
+            '💡 Membandingkan akumulasi <b style="color:#00E676;">Realisasi Riil</b> terhadap <b style="color:#FFCA28;">Target Ideal Kumulatif</b> untuk mendeteksi deviasi serapan.'
+            '</div>',
+            unsafe_allow_html=True
+        )
         trend_tab1, trend_tab2 = st.tabs(["📅 Tren Bulanan", "📊 Tren Triwulanan"])
 
         with trend_tab1:

@@ -212,7 +212,8 @@ def create_trend_chart(
     mode: str = "bulanan",
 ) -> go.Figure:
     """
-    Membuat area chart tren realisasi yang modern, mewah, dan responsif.
+    Membuat area chart tren realisasi yang modern, mewah, dan responsif,
+    dilengkapi Garis Target Ideal (Baseline Benchmark) proporsional.
     """
     if monthly_df.empty:
         fig = go.Figure()
@@ -224,6 +225,8 @@ def create_trend_chart(
         )
         return fig
 
+    pagu_total = float(monthly_df["pagu_anggaran"].iloc[0]) if "pagu_anggaran" in monthly_df.columns and not monthly_df.empty else 0.0
+
     if mode == "bulanan":
         x_col = "nama_bulan"
         y_col = "realisasi_kumulatif"
@@ -231,6 +234,9 @@ def create_trend_chart(
             "Januari", "Februari", "Maret", "April", "Mei", "Juni",
             "Juli", "Agustus", "September", "Oktober", "November", "Desember"
         ]
+        # Target proporsional bulanan (m / 12)
+        target_series = monthly_df["bulan"].apply(lambda m: pagu_total * (m / 12.0) if pd.notna(m) else 0.0)
+        target_pct = monthly_df["bulan"].apply(lambda m: (m / 12.0) * 100.0 if pd.notna(m) else 0.0)
     else:
         x_col = "nama_triwulan"
         y_col = "realisasi_kumulatif"
@@ -238,26 +244,78 @@ def create_trend_chart(
             "Triwulan I (Jan-Mar)", "Triwulan II (Apr-Jun)",
             "Triwulan III (Jul-Sep)", "Triwulan IV (Okt-Des)",
         ]
+        # Target proporsional triwulanan (q / 4)
+        target_series = monthly_df["triwulan"].apply(lambda q: pagu_total * (q / 4.0) if pd.notna(q) else 0.0)
+        target_pct = monthly_df["triwulan"].apply(lambda q: (q / 4.0) * 100.0 if pd.notna(q) else 0.0)
+
+    # Hitung persentase realisasi dan deviasi selisih laju
+    real_pct = (monthly_df[y_col] / max(pagu_total, 1.0)) * 100.0
+    selisih_pct = real_pct - target_pct
+
+    real_customdata = []
+    for r_val, r_p, t_val, t_p, s_p in zip(monthly_df[y_col], real_pct, target_series, target_pct, selisih_pct):
+        if s_p >= 0:
+            laju_str = f"+{s_p:.1f}% (On-Track)"
+        elif s_p >= -10:
+            laju_str = f"{s_p:.1f}% (Cukup)"
+        else:
+            laju_str = f"{s_p:.1f}% (Terlambat)"
+
+        real_customdata.append([
+            format_rupiah(r_val),
+            r_p,
+            format_rupiah(t_val),
+            t_p,
+            laju_str,
+        ])
+
+    target_customdata = [
+        [format_rupiah(t_val), t_p]
+        for t_val, t_p in zip(target_series, target_pct)
+    ]
 
     fig = go.Figure()
 
-    # Glowing Area Fill + Smooth Spline Line
+    # 1. Garis Target Ideal Kumulatif (Benchmark)
+    fig.add_trace(go.Scatter(
+        x=monthly_df[x_col],
+        y=target_series,
+        mode="lines+markers",
+        name="Target Ideal Kumulatif",
+        line=dict(color="#FFCA28", width=2.2, dash="dash"),
+        marker=dict(
+            size=7,
+            color="#FFCA28",
+            symbol="diamond",
+            line=dict(color="#FFFFFF", width=1.5),
+        ),
+        customdata=target_customdata,
+        hovertemplate="🎯 <b>Target Ideal (%{x})</b><br>📌 Target: <b>%{customdata[0]}</b> (<b>%{customdata[1]:.1f}%</b>)<extra></extra>",
+    ))
+
+    # 2. Garis & Area Realisasi Riil Kumulatif
     fig.add_trace(go.Scatter(
         x=monthly_df[x_col],
         y=monthly_df[y_col],
         fill="tozeroy",
-        fillcolor="rgba(0, 230, 118, 0.14)",
+        fillcolor="rgba(0, 230, 118, 0.12)",
         line=dict(color="#00E676", width=3.5, shape="spline", smoothing=1.3),
         mode="lines+markers",
         marker=dict(
             size=9,
             color="#00E676",
             line=dict(color="#FFFFFF", width=2),
-            symbol="circle"
+            symbol="circle",
         ),
-        name="Realisasi Kumulatif",
-        customdata=[format_rupiah(v) for v in monthly_df[y_col]],
-        hovertemplate="📅 <b>%{x}</b><br>💰 Realisasi: <b>%{customdata}</b><extra></extra>",
+        name="Realisasi Riil Kumulatif",
+        customdata=real_customdata,
+        hovertemplate=(
+            "📅 <b>%{x}</b><br>"
+            "✅ Realisasi: <b>%{customdata[0]}</b> (<b>%{customdata[1]:.1f}%</b>)<br>"
+            "🎯 Target Ideal: <b>%{customdata[2]}</b> (<b>%{customdata[3]:.1f}%</b>)<br>"
+            "⚡ Status Laju: <b>%{customdata[4]}</b>"
+            "<extra></extra>"
+        ),
     ))
 
     fig.update_layout(
@@ -274,11 +332,21 @@ def create_trend_chart(
                 showgrid=True,
                 gridcolor="rgba(255,255,255,0.06)",
                 title="",
+                tickformat=",.0f",
                 tickfont=dict(size=10.5, color=COLORS["text_muted"]),
             ),
-            margin=dict(l=25, r=25, t=25, b=25),
+            margin=dict(l=25, r=25, t=35, b=25),
             height=340,
-            showlegend=False,
+            showlegend=True,
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1.0,
+                font=dict(size=11, color=COLORS["text_muted"]),
+                bgcolor="rgba(0,0,0,0)",
+            ),
         )
     )
 
