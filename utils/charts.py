@@ -137,6 +137,7 @@ def format_rupiah_sumbu(value: float) -> str:
 def create_gauge_chart(percentage: float, title: str = "Capaian Realisasi") -> go.Figure:
     """
     Membuat gauge chart persentase capaian realisasi yang modern & elegan.
+    Bebas tumpang tindih teks dengan pill status terisolasi di bawah angka.
     """
     pct = max(0.0, min(100.0, float(percentage)))
 
@@ -144,21 +145,28 @@ def create_gauge_chart(percentage: float, title: str = "Capaian Realisasi") -> g
         bar_color = "#00E676"  # Emerald Green Glow
         status_text = "Target Sangat Baik"
         status_color = "#00E676"
+        status_bg = "rgba(0, 230, 118, 0.12)"
+        status_border = "rgba(0, 230, 118, 0.3)"
     elif pct >= 50:
         bar_color = "#FFCA28"  # Amber Gold
         status_text = "Cukup / On-Track"
         status_color = "#FFCA28"
+        status_bg = "rgba(255, 202, 40, 0.12)"
+        status_border = "rgba(255, 202, 40, 0.3)"
     else:
         bar_color = "#FF5252"  # Coral Red
         status_text = "Perlu Perhatian"
         status_color = "#FF5252"
+        status_bg = "rgba(255, 82, 82, 0.12)"
+        status_border = "rgba(255, 82, 82, 0.3)"
 
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
         value=pct,
+        domain=dict(x=[0.06, 0.94], y=[0.18, 1.0]),
         number=dict(
             suffix="%",
-            font=dict(size=36, color="#FFFFFF", family="Inter, sans-serif"),
+            font=dict(size=40, color="#FFFFFF", family="Inter, sans-serif"),
         ),
         gauge=dict(
             axis=dict(
@@ -171,7 +179,7 @@ def create_gauge_chart(percentage: float, title: str = "Capaian Realisasi") -> g
             ),
             bar=dict(
                 color=bar_color,
-                thickness=0.76,
+                thickness=0.74,
                 line=dict(color="rgba(255,255,255,0.25)", width=1)
             ),
             bgcolor="rgba(255,255,255,0.06)",
@@ -183,7 +191,7 @@ def create_gauge_chart(percentage: float, title: str = "Capaian Realisasi") -> g
             ],
             threshold=dict(
                 line=dict(color="#FFFFFF", width=3),
-                thickness=0.82,
+                thickness=0.80,
                 value=pct,
             ),
         ),
@@ -191,13 +199,13 @@ def create_gauge_chart(percentage: float, title: str = "Capaian Realisasi") -> g
 
     fig.update_layout(
         **_merged_layout(
-            margin=dict(l=25, r=25, t=25, b=20),
-            height=285,
+            margin=dict(l=15, r=15, t=15, b=15),
+            height=330,
             annotations=[
                 dict(
-                    text=f"<span style='color:{status_color};font-weight:700;font-size:12px;'>● {status_text}</span>",
+                    text=f"<span style='color:{status_color};background:{status_bg};border:1px solid {status_border};padding:4px 14px;border-radius:20px;font-weight:700;font-size:12px;'>● {status_text}</span>",
                     x=0.5,
-                    y=0.12,
+                    y=0.03,
                     showarrow=False,
                 )
             ]
@@ -524,6 +532,7 @@ def create_donut_chart(composition_df: pd.DataFrame, max_slices: int = 5) -> go.
         labels=clean_labels,
         values=plot_df["realisasi"],
         hole=0.62,
+        domain=dict(x=[0.0, 0.55], y=[0.02, 0.98]),
         marker=dict(
             colors=colors,
             line=dict(color="#0E1117", width=2)
@@ -540,20 +549,20 @@ def create_donut_chart(composition_df: pd.DataFrame, max_slices: int = 5) -> go.
         **_merged_layout(
             title="",
             legend=dict(
-                orientation="h",
-                yanchor="top",
-                y=-0.08,
-                xanchor="center",
-                x=0.5,
-                font=dict(size=10, color=COLORS["text_muted"]),
+                orientation="v",
+                yanchor="middle",
+                y=0.5,
+                xanchor="left",
+                x=0.58,
+                font=dict(size=10.5, color=COLORS["text_muted"]),
             ),
-            margin=dict(l=10, r=10, t=20, b=80),
-            height=430,
+            margin=dict(l=10, r=15, t=15, b=15),
+            height=330,
             showlegend=True,
             annotations=[
                 dict(
-                    text=f"<b style='color:#F8FAFC;font-size:15px;'>{total_str}</b><br><span style='color:#94A3B8;font-size:11px;'>Total Realisasi</span>",
-                    x=0.5, y=0.5,
+                    text=f"<b style='color:#F8FAFC;font-size:15px;'>{total_str}</b><br><span style='color:#94A3B8;font-size:10.5px;'>Total Realisasi</span>",
+                    x=0.275, y=0.5,
                     showarrow=False,
                 )
             ],

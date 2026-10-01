@@ -1282,7 +1282,7 @@ elif page == "📊 Dashboard":
     with tab_ringkasan:
         # ── Executive Summary & Insight Card ──
         insights = get_executive_insights(df_filtered, summary)
-        with st.expander("💡 Executive Summary & Insight Naratif Otomatis", expanded=True):
+        with st.expander("💡 Executive Summary & Insight Naratif Otomatis (Klik untuk Membaca)", expanded=False):
             st.markdown("#### 📌 Ringkasan Eksekutif & Analisis Data")
             for b in insights["bullets"]:
                 st.markdown(f"- {b}")
